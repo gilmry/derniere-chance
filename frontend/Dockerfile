@@ -4,6 +4,9 @@
 FROM node:22-slim AS builder
 WORKDIR /app
 
+ARG PUBLIC_API_URL=https://api.derniere-chance.ecosolva.org
+ENV PUBLIC_API_URL=${PUBLIC_API_URL}
+
 COPY package.json package-lock.json* ./
 RUN npm install
 

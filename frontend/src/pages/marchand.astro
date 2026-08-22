@@ -1,0 +1,9 @@
+---
+// id vient de la query string (?id=...), lu client-side par MerchantProfile.
+import AppLayout from "../layouts/AppLayout.astro";
+import MerchantProfile from "../components/MerchantProfile.svelte";
+---
+
+<AppLayout title="Commerçant">
+  <MerchantProfile client:load />
+</AppLayout>

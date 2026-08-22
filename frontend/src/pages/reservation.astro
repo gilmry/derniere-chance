@@ -1,0 +1,11 @@
+---
+// Pas de code en query string ici : ReservationConfirm lit la confirmation
+// posée en sessionStorage par OfferDetail juste avant la navigation (il
+// n'existe pas d'endpoint public pour relire une réservation par code).
+import AppLayout from "../layouts/AppLayout.astro";
+import ReservationConfirm from "../components/ReservationConfirm.svelte";
+---
+
+<AppLayout title="Panier réservé">
+  <ReservationConfirm client:load />
+</AppLayout>

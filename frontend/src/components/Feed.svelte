@@ -1,26 +1,34 @@
 <script lang="ts">
   import Photo from "./Photo.svelte";
-  import {
-    offers,
-    merchants,
-    getMerchant,
-    discountPercent,
-    formatPrice,
-  } from "../lib/mock";
+  import { listOffers, formatPrice, ApiError, type Offer } from "../lib/api";
 
   const categories = ["Tout", "Boulangerie", "Primeur"];
 
   let view: "carte" | "liste" = "carte";
   let category = "Tout";
+  let offers: Offer[] = [];
+  let loading = true;
+  let loadError = "";
 
-  $: visibleOffers = offers.filter((offer) => {
-    if (offer.status !== "active") return false;
-    if (category === "Tout") return true;
-    return getMerchant(offer.merchantId)?.category === category;
-  });
+  async function load() {
+    loading = true;
+    loadError = "";
+    try {
+      offers = await listOffers(category === "Tout" ? undefined : category);
+    } catch (err) {
+      loadError = err instanceof ApiError ? err.message : "Impossible de charger les offres.";
+    } finally {
+      loading = false;
+    }
+  }
 
-  $: featured = visibleOffers[0];
-  $: featuredMerchant = featured ? getMerchant(featured.merchantId) : undefined;
+  $: category, load();
+
+  function pickupEnd(offer: Offer): string {
+    return new Date(offer.retrait_fin).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  $: featured = offers[0];
 </script>
 
 <div class="screen">
@@ -47,41 +55,44 @@
     </div>
   </div>
 
-  {#if view === "carte"}
+  {#if loading}
+    <p class="state">Chargement...</p>
+  {:else if loadError}
+    <p class="state error">{loadError}</p>
+  {:else if view === "carte"}
     <div class="map">
       <Photo shape="rect" label="Carte des commerçants à proximité" />
-      {#if featured && featuredMerchant}
-        <a class="map-card" href={`/offre/${featured.id}`}>
+      {#if featured}
+        <a class="map-card" href={`/offre?id=${featured.id}`}>
           <div class="map-card-photo">
             <Photo shape="rounded" radius={12} label="Photo" />
           </div>
           <div class="map-card-info">
-            <div class="map-card-name">{featuredMerchant.name}</div>
-            <div class="map-card-detail">Panier surprise · retrait {featured.pickupWindow.split("–")[1]?.trim() ?? featured.pickupWindow}</div>
+            <div class="map-card-name">{featured.marchand_nom}</div>
+            <div class="map-card-detail">{featured.nom} · retrait {pickupEnd(featured)}</div>
           </div>
-          <div class="badge-discount">-{discountPercent(featured)}%</div>
+          <div class="badge-discount">-{featured.reduction_pct}%</div>
         </a>
       {/if}
     </div>
   {:else}
     <div class="list">
-      {#each visibleOffers as offer}
-        {@const merchant = getMerchant(offer.merchantId)}
-        <a class="card offer-row" href={`/offre/${offer.id}`}>
+      {#each offers as offer}
+        <a class="card offer-row" href={`/offre?id=${offer.id}`}>
           <div class="offer-photo">
             <Photo shape="rounded" radius={14} label="Photo panier" />
           </div>
           <div class="offer-info">
-            <div class="offer-name">{merchant?.name}</div>
-            <div class="offer-detail">{offer.title} · {offer.quantityLeft} restants</div>
+            <div class="offer-name">{offer.marchand_nom}</div>
+            <div class="offer-detail">{offer.nom} · {offer.quantite} restants</div>
             <div class="price-row">
-              <span class="price-old">{formatPrice(offer.priceOriginal)}</span>
-              <span class="price-new">{formatPrice(offer.pricePromo)}</span>
+              <span class="price-old">{formatPrice(offer.prix_initial)}</span>
+              <span class="price-new">{formatPrice(offer.prix_demarque)}</span>
             </div>
           </div>
         </a>
       {/each}
-      {#if visibleOffers.length === 0}
+      {#if offers.length === 0}
         <p class="empty">Aucune offre dans cette catégorie pour le moment.</p>
       {/if}
     </div>
@@ -93,6 +104,16 @@
     flex: 1;
     display: flex;
     flex-direction: column;
+  }
+
+  .state {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--color-muted);
+  }
+
+  .state.error {
+    color: #c0392b;
   }
 
   .header {

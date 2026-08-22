@@ -1,51 +1,106 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import Photo from "./Photo.svelte";
-  import { getMerchant, discountPercent, formatPrice, reservationCodeFor, type Offer } from "../lib/mock";
+  import { getOffer, reserveOffer, ApiError, formatPrice, type Offer } from "../lib/api";
+  import { getConsumerToken } from "../lib/auth";
+  import { getQueryParam } from "../lib/params";
 
-  export let offer: Offer;
+  let offer: Offer | null = null;
+  let loading = true;
+  let loadError = "";
+  let reserving = false;
+  let reserveError = "";
 
-  const merchant = getMerchant(offer.merchantId);
-  const code = reservationCodeFor(offer);
+  onMount(async () => {
+    const id = getQueryParam("id");
+    if (!id) {
+      loadError = "Offre introuvable.";
+      loading = false;
+      return;
+    }
+    try {
+      offer = await getOffer(id);
+    } catch (err) {
+      loadError = err instanceof ApiError ? err.message : "Impossible de charger cette offre.";
+    } finally {
+      loading = false;
+    }
+  });
 
-  let saved = false;
+  function pickupEndTime(offer: Offer): string {
+    return new Date(offer.retrait_fin).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function pickupWindow(offer: Offer): string {
+    const start = new Date(offer.retrait_debut).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    const end = pickupEndTime(offer);
+    return `${start} – ${end}`;
+  }
+
+  async function reserve() {
+    if (!offer) return;
+    const token = getConsumerToken();
+    if (!token) {
+      window.location.href = `/compte?mode=login&next=${encodeURIComponent(`/offre?id=${offer.id}`)}`;
+      return;
+    }
+    reserving = true;
+    reserveError = "";
+    try {
+      const confirmation = await reserveOffer(offer.id, token);
+      sessionStorage.setItem("dc_last_reservation", JSON.stringify(confirmation));
+      window.location.href = "/reservation";
+    } catch (err) {
+      reserveError = err instanceof ApiError ? err.message : "La réservation a échoué.";
+    } finally {
+      reserving = false;
+    }
+  }
 </script>
 
 <div class="screen">
-  <div class="photo-wrap">
-    <Photo shape="rect" label="Photo du panier surprise" />
-    <span class="badge-discount overlay-badge">-{discountPercent(offer)}%</span>
-    <button class="fav" class:saved on:click={() => (saved = !saved)} aria-label="Ajouter aux favoris">
-      {saved ? "♥" : "♡"}
-    </button>
-  </div>
-  <div class="body">
-    <div>
-      <h1>{offer.title}</h1>
-      {#if merchant}
-        <p class="subtitle"><a href={`/marchand/${merchant.id}`}>{merchant.name}</a> · {merchant.distance}</p>
+  {#if loading}
+    <p class="state">Chargement...</p>
+  {:else if loadError || !offer}
+    <p class="state error">{loadError || "Offre introuvable."}</p>
+  {:else}
+    <div class="photo-wrap">
+      <Photo shape="rect" label="Photo du panier surprise" />
+      <span class="badge-discount overlay-badge">-{offer.reduction_pct}%</span>
+    </div>
+    <div class="body">
+      <div>
+        <h1>{offer.nom}</h1>
+        <p class="subtitle">
+          <a href={`/marchand?id=${offer.marchand_id}`}>{offer.marchand_nom}</a> · {offer.marchand_categorie}
+        </p>
+      </div>
+      {#if offer.description}<p class="description">{offer.description}</p>{/if}
+      <div class="price-row">
+        <span class="price-old">{formatPrice(offer.prix_initial)}</span>
+        <span class="price-new big">{formatPrice(offer.prix_demarque)}</span>
+      </div>
+      <div class="info-grid">
+        <div class="info-tile">
+          <div class="info-label">RETRAIT</div>
+          <div class="info-value">{pickupWindow(offer)}</div>
+        </div>
+        <div class="info-tile">
+          <div class="info-label">RESTANTS</div>
+          <div class="info-value">{offer.quantite} paniers</div>
+        </div>
+      </div>
+      <div class="spacer"></div>
+      {#if reserveError}<p class="state error">{reserveError}</p>{/if}
+      {#if offer.statut === "publie" && offer.quantite > 0}
+        <button class="btn btn-primary" on:click={reserve} disabled={reserving}>
+          {reserving ? "..." : "Réserver ce panier"}
+        </button>
+      {:else}
+        <button class="btn btn-primary" disabled>Panier épuisé</button>
       {/if}
     </div>
-    <div class="price-row">
-      <span class="price-old">{formatPrice(offer.priceOriginal)}</span>
-      <span class="price-new big">{formatPrice(offer.pricePromo)}</span>
-    </div>
-    <div class="info-grid">
-      <div class="info-tile">
-        <div class="info-label">RETRAIT</div>
-        <div class="info-value">{offer.pickupWindow}</div>
-      </div>
-      <div class="info-tile">
-        <div class="info-label">RESTANTS</div>
-        <div class="info-value">{offer.quantityLeft} paniers</div>
-      </div>
-    </div>
-    <div class="spacer"></div>
-    {#if offer.status === "active"}
-      <a class="btn btn-primary" href={`/reservation/${code}`}>Réserver ce panier</a>
-    {:else}
-      <button class="btn btn-primary" disabled>Panier épuisé</button>
-    {/if}
-  </div>
+  {/if}
 </div>
 
 <style>
@@ -53,6 +108,16 @@
     flex: 1;
     display: flex;
     flex-direction: column;
+  }
+
+  .state {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--color-muted);
+  }
+
+  .state.error {
+    color: #c0392b;
   }
 
   .photo-wrap {
@@ -65,26 +130,6 @@
     position: absolute;
     top: 16px;
     left: 16px;
-  }
-
-  .fav {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    width: 36px;
-    height: 36px;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.9);
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    cursor: pointer;
-  }
-
-  .fav.saved {
-    color: var(--color-accent);
   }
 
   .body {
@@ -107,6 +152,12 @@
 
   .subtitle a {
     font-weight: 600;
+  }
+
+  .description {
+    font-size: 13px;
+    color: var(--color-muted);
+    line-height: 1.5;
   }
 
   .big {

@@ -1,48 +1,112 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import Photo from "./Photo.svelte";
-  import { getMerchantOffers, formatPrice, type Merchant } from "../lib/mock";
+  import {
+    getMerchantProfile,
+    followMerchant,
+    unfollowMerchant,
+    listFollowedMerchants,
+    formatPrice,
+    ApiError,
+    type MerchantProfile,
+  } from "../lib/api";
+  import { getConsumerToken } from "../lib/auth";
+  import { getQueryParam } from "../lib/params";
 
-  export let merchant: Merchant;
+  let merchant: MerchantProfile | null = null;
+  let loading = true;
+  let loadError = "";
+  let following = false;
+  let followBusy = false;
+  let merchantId = "";
 
-  let following = merchant.followed;
-  const merchantOffers = getMerchantOffers(merchant.id).filter((o) => o.status === "active");
+  onMount(async () => {
+    const id = getQueryParam("id");
+    if (!id) {
+      loadError = "Commerçant introuvable.";
+      loading = false;
+      return;
+    }
+    merchantId = id;
+    try {
+      merchant = await getMerchantProfile(id);
+      const token = getConsumerToken();
+      if (token) {
+        const followed = await listFollowedMerchants(token);
+        following = followed.some((m) => m.id === id);
+      }
+    } catch (err) {
+      loadError = err instanceof ApiError ? err.message : "Impossible de charger ce commerçant.";
+    } finally {
+      loading = false;
+    }
+  });
+
+  async function toggleFollow() {
+    const token = getConsumerToken();
+    if (!token) {
+      window.location.href = `/compte?mode=login&next=${encodeURIComponent(`/marchand?id=${merchantId}`)}`;
+      return;
+    }
+    followBusy = true;
+    try {
+      if (following) {
+        await unfollowMerchant(merchantId, token);
+      } else {
+        await followMerchant(merchantId, token);
+      }
+      following = !following;
+    } catch {
+      // reste dans l'état précédent, pas de state d'erreur dédié pour cette action mineure
+    } finally {
+      followBusy = false;
+    }
+  }
 </script>
 
 <div class="screen">
-  <div class="cover">
-    <Photo shape="rect" label="Photo de couverture du commerce" />
-  </div>
-  <div class="body">
-    <div class="identity">
-      <div class="avatar">
-        <Photo shape="rounded" radius={16} label="Logo" />
+  {#if loading}
+    <p class="state">Chargement...</p>
+  {:else if loadError || !merchant}
+    <p class="state error">{loadError || "Commerçant introuvable."}</p>
+  {:else}
+    <div class="cover">
+      <Photo shape="rect" label="Photo de couverture du commerce" />
+    </div>
+    <div class="body">
+      <div class="identity">
+        <div class="avatar">
+          <Photo shape="rounded" radius={16} label="Logo" />
+        </div>
+        <div class="identity-text">
+          <h1>{merchant.nom}</h1>
+          <p class="subtitle">
+            {merchant.categorie} · {merchant.adresse}{merchant.note ? ` · ⭐ ${merchant.note}` : ""}
+          </p>
+        </div>
       </div>
-      <div class="identity-text">
-        <h1>{merchant.name}</h1>
-        <p class="subtitle">{merchant.category} · {merchant.distance} · ⭐ {merchant.rating}</p>
+      <button class="btn btn-dark follow" class:following on:click={toggleFollow} disabled={followBusy}>
+        {following ? "✓ Abonné" : "+ S'abonner"}
+      </button>
+      <div class="section-title">Offres actives</div>
+      <div class="offers">
+        {#each merchant.offres.filter((o) => o.statut === "publie") as offer}
+          <a class="card offer-row" href={`/offre?id=${offer.id}`}>
+            <div class="offer-photo">
+              <Photo shape="rounded" radius={10} label="Photo" />
+            </div>
+            <div class="offer-info">
+              <div class="offer-name">{offer.nom}</div>
+              <div class="offer-price">{formatPrice(offer.prix_demarque)}</div>
+            </div>
+          </a>
+        {/each}
+        {#if merchant.offres.filter((o) => o.statut === "publie").length === 0}
+          <p class="empty">Pas d'offre active pour le moment.</p>
+        {/if}
       </div>
     </div>
-    <button class="btn btn-dark follow" class:following on:click={() => (following = !following)}>
-      {following ? "✓ Abonné" : "+ S'abonner"}
-    </button>
-    <div class="section-title">Offres actives</div>
-    <div class="offers">
-      {#each merchantOffers as offer}
-        <a class="card offer-row" href={`/offre/${offer.id}`}>
-          <div class="offer-photo">
-            <Photo shape="rounded" radius={10} label="Photo" />
-          </div>
-          <div class="offer-info">
-            <div class="offer-name">{offer.title}</div>
-            <div class="offer-price">{formatPrice(offer.pricePromo)}</div>
-          </div>
-        </a>
-      {/each}
-      {#if merchantOffers.length === 0}
-        <p class="empty">Pas d'offre active pour le moment.</p>
-      {/if}
-    </div>
-  </div>
+  {/if}
 </div>
 
 <style>
@@ -51,6 +115,16 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+  }
+
+  .state {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--color-muted);
+  }
+
+  .state.error {
+    color: #c0392b;
   }
 
   .cover {

@@ -1,0 +1,11 @@
+---
+// output:"static" prerenders this page once at build time, so query params
+// (?mode=login, ?next=/marchand?id=...) aren't known here - ConsumerAuth
+// reads them itself client-side (window.location.search) on mount.
+import AppLayout from "../layouts/AppLayout.astro";
+import ConsumerAuth from "../components/ConsumerAuth.svelte";
+---
+
+<AppLayout title="Mon compte">
+  <ConsumerAuth client:load />
+</AppLayout>

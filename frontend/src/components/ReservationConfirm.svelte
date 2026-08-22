@@ -1,25 +1,51 @@
 <script lang="ts">
-  import { formatPrice, type Offer, type Merchant } from "../lib/mock";
+  import { onMount } from "svelte";
+  import { formatPrice, type ReservationConfirmation } from "../lib/api";
 
-  export let offer: Offer;
-  export let merchant: Merchant | undefined;
-  export let code: string;
+  let confirmation: ReservationConfirmation | null = null;
+
+  onMount(() => {
+    const raw = sessionStorage.getItem("dc_last_reservation");
+    if (raw) {
+      try {
+        confirmation = JSON.parse(raw);
+      } catch {
+        confirmation = null;
+      }
+    }
+  });
+
+  function pickupWindow(c: ReservationConfirmation): string {
+    const opts: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit" };
+    const start = new Date(c.retrait_debut).toLocaleTimeString("fr-FR", opts);
+    const end = new Date(c.retrait_fin).toLocaleTimeString("fr-FR", opts);
+    return `${start} – ${end}`;
+  }
 </script>
 
 <div class="screen">
-  <div class="check">✓</div>
-  <div class="heading">
-    <h1>Panier réservé !</h1>
-    <p>Présente ce code en boutique</p>
-  </div>
-  <div class="code">{code}</div>
-  <div class="details">
-    <div class="row"><span class="label">Commerçant</span><span class="value">{merchant?.name ?? "—"}</span></div>
-    <div class="row"><span class="label">Retrait</span><span class="value">Aujourd'hui, {offer.pickupWindow}</span></div>
-    <div class="row"><span class="label">Total</span><span class="value">{formatPrice(offer.pricePromo)}</span></div>
-  </div>
+  {#if confirmation}
+    <div class="check">✓</div>
+    <div class="heading">
+      <h1>Panier réservé !</h1>
+      <p>Présente ce code en boutique</p>
+    </div>
+    <div class="code">{confirmation.code}</div>
+    <div class="details">
+      <div class="row"><span class="label">Commerçant</span><span class="value">{confirmation.marchand_nom}</span></div>
+      <div class="row"><span class="label">Panier</span><span class="value">{confirmation.produit_nom}</span></div>
+      <div class="row"><span class="label">Retrait</span><span class="value">{pickupWindow(confirmation)}</span></div>
+      <div class="row"><span class="label">Total</span><span class="value">{formatPrice(confirmation.prix_demarque)}</span></div>
+    </div>
+  {:else}
+    <div class="heading">
+      <h1>Réservation introuvable</h1>
+      <p>Retrouve tes réservations en cours depuis ton profil.</p>
+    </div>
+    <a class="btn itinerary" href="/profil">Voir mon profil</a>
+  {/if}
   <div class="spacer"></div>
-  <button class="btn itinerary">Voir l'itinéraire</button>
+  {#if confirmation}<a class="btn itinerary" href="/feed">Continuer</a>{/if}
 </div>
 
 <style>
@@ -104,5 +130,10 @@
     color: var(--color-primary);
     border-radius: 16px;
     font-size: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    font-weight: 700;
   }
 </style>

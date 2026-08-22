@@ -1,0 +1,10 @@
+---
+// id vient de la query string (?id=...), lu client-side par OfferDetail -
+// voir astro.config.mjs pour le pourquoi.
+import AppLayout from "../layouts/AppLayout.astro";
+import OfferDetail from "../components/OfferDetail.svelte";
+---
+
+<AppLayout title="Offre">
+  <OfferDetail client:load />
+</AppLayout>

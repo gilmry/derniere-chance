@@ -1,40 +1,77 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import Photo from "./Photo.svelte";
-  import { merchants } from "../lib/mock";
+  import { consumerProfile, listFollowedMerchants, formatPrice, ApiError, type ConsumerProfile, type Merchant } from "../lib/api";
+  import { getConsumerToken, getConsumerEmail } from "../lib/auth";
+
+  let profile: ConsumerProfile | null = null;
+  let followed: Merchant[] = [];
+  let loading = true;
+  let loadError = "";
+  let email = "";
+
+  onMount(async () => {
+    const token = getConsumerToken();
+    email = getConsumerEmail() ?? "";
+    if (!token) {
+      loading = false;
+      return;
+    }
+    try {
+      [profile, followed] = await Promise.all([consumerProfile(token), listFollowedMerchants(token)]);
+    } catch (err) {
+      loadError = err instanceof ApiError ? err.message : "Impossible de charger ton profil.";
+    } finally {
+      loading = false;
+    }
+  });
 </script>
 
 <div class="screen">
-  <div class="identity">
-    <div class="avatar">
-      <Photo shape="circle" label="Photo" />
+  {#if loading}
+    <p class="state">Chargement...</p>
+  {:else if !getConsumerToken()}
+    <div class="signed-out">
+      <p>Connecte-toi pour voir ton profil et tes commerçants suivis.</p>
+      <a class="btn btn-primary" href="/compte?mode=login">Se connecter</a>
     </div>
-    <div>
-      <h1>Salut, Léa 👋</h1>
-      <p class="subtitle">Membre depuis mars 2026</p>
+  {:else if loadError}
+    <p class="state error">{loadError}</p>
+  {:else}
+    <div class="identity">
+      <div class="avatar">
+        <Photo shape="circle" label="Photo" />
+      </div>
+      <div>
+        <h1>Salut 👋</h1>
+        {#if email}<p class="subtitle">{email}</p>{/if}
+      </div>
     </div>
-  </div>
-  <div class="stats">
-    <div class="card stat">
-      <div class="stat-value">27</div>
-      <div class="stat-label">paniers sauvés</div>
+    <div class="stats">
+      <div class="card stat">
+        <div class="stat-value">{profile?.paniers_sauves ?? 0}</div>
+        <div class="stat-label">paniers sauvés</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-value">{formatPrice(profile?.montant_economise ?? "0")}</div>
+        <div class="stat-label">économisés</div>
+      </div>
     </div>
-    <div class="card stat">
-      <div class="stat-value">61 €</div>
-      <div class="stat-label">économisés</div>
+    <div class="section-title">Commerçants suivis</div>
+    <div class="list">
+      {#each followed as merchant}
+        <a class="card row" href={`/marchand?id=${merchant.id}`}>
+          <div class="row-photo">
+            <Photo shape="rounded" radius={10} label="Logo" />
+          </div>
+          <div class="row-name">{merchant.nom}</div>
+        </a>
+      {/each}
+      {#if followed.length === 0}
+        <p class="empty">Tu ne suis aucun commerçant pour le moment.</p>
+      {/if}
     </div>
-  </div>
-  <div class="section-title">Commerçants suivis</div>
-  <div class="list">
-    {#each merchants as merchant}
-      <a class="card row" href={`/marchand/${merchant.id}`}>
-        <div class="row-photo">
-          <Photo shape="rounded" radius={10} label="Logo" />
-        </div>
-        <div class="row-name">{merchant.name}</div>
-        <span class="dot" class:on={merchant.followed}></span>
-      </a>
-    {/each}
-  </div>
+  {/if}
 </div>
 
 <style>
@@ -44,6 +81,27 @@
     display: flex;
     flex-direction: column;
     gap: 20px;
+  }
+
+  .state {
+    padding: 40px 0;
+    text-align: center;
+    color: var(--color-muted);
+  }
+
+  .state.error {
+    color: #c0392b;
+  }
+
+  .signed-out {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    text-align: center;
+    color: var(--color-muted);
   }
 
   .identity {
@@ -97,6 +155,11 @@
     color: var(--color-muted-light);
   }
 
+  .empty {
+    color: var(--color-muted-light);
+    font-size: 14px;
+  }
+
   .list {
     display: flex;
     flex-direction: column;
@@ -123,16 +186,5 @@
     font-size: 13px;
     font-weight: 600;
     color: var(--color-ink);
-  }
-
-  .dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 4px;
-    background: var(--color-border);
-  }
-
-  .dot.on {
-    background: var(--color-primary);
   }
 </style>

@@ -13,8 +13,8 @@
     </p>
   </div>
   <div class="actions">
-    <a class="btn btn-primary" href="/feed">Créer un compte</a>
-    <a class="btn btn-secondary" href="/feed">J'ai déjà un compte</a>
+    <a class="btn btn-primary" href="/compte?mode=register">Créer un compte</a>
+    <a class="btn btn-secondary" href="/compte?mode=login">J'ai déjà un compte</a>
     <div class="dots">
       <span class="dot dot--active"></span>
       <span class="dot"></span>

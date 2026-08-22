@@ -1,10 +1,31 @@
 <script lang="ts">
+  import { merchantLogin, merchantRegister, ApiError } from "../lib/api";
+  import { setMerchantToken } from "../lib/auth";
+
+  let mode: "login" | "register" = "login";
   let email = "";
   let password = "";
+  let nom = "";
+  let adresse = "";
+  let categorie = "";
+  let error = "";
+  let loading = false;
 
-  function submit(event: SubmitEvent) {
+  async function submit(event: SubmitEvent) {
     event.preventDefault();
-    window.location.href = "/pro/dashboard";
+    error = "";
+    loading = true;
+    try {
+      const auth = mode === "register"
+        ? await merchantRegister({ nom, adresse, categorie, email, password })
+        : await merchantLogin(email, password);
+      setMerchantToken(auth.token);
+      window.location.href = "/pro/dashboard";
+    } catch (err) {
+      error = err instanceof ApiError ? err.message : "Une erreur est survenue.";
+    } finally {
+      loading = false;
+    }
   }
 </script>
 
@@ -16,10 +37,25 @@
   <form class="body" on:submit={submit}>
     <h1>Vos invendus, en 30 secondes.</h1>
     <div class="fields">
+      {#if mode === "register"}
+        <input placeholder="Nom du commerce" bind:value={nom} required />
+        <input placeholder="Adresse" bind:value={adresse} required />
+        <input placeholder="Catégorie (ex. Boulangerie)" bind:value={categorie} required />
+      {/if}
       <input placeholder="Email professionnel" type="email" bind:value={email} required />
-      <input placeholder="Mot de passe" type="password" bind:value={password} required />
+      <input placeholder="Mot de passe" type="password" bind:value={password} required minlength="8" />
+      {#if error}<p class="error">{error}</p>{/if}
     </div>
-    <button class="btn btn-primary" type="submit">Se connecter</button>
+    <button class="btn btn-primary" type="submit" disabled={loading}>
+      {loading ? "..." : mode === "register" ? "Créer mon compte marchand" : "Se connecter"}
+    </button>
+    <button
+      class="switch"
+      type="button"
+      on:click={() => (mode = mode === "register" ? "login" : "register")}
+    >
+      {mode === "register" ? "J'ai déjà un compte" : "Créer un compte marchand"}
+    </button>
   </form>
 </div>
 
@@ -79,5 +115,20 @@
 
   input::placeholder {
     color: rgba(255, 255, 255, 0.5);
+  }
+
+  .error {
+    color: #ff8a80;
+    font-size: 13px;
+  }
+
+  .switch {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 600;
+    font-size: 13px;
+    text-align: center;
+    padding: 4px;
   }
 </style>
