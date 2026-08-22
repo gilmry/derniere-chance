@@ -1,0 +1,57 @@
+# Traefik partagé du VPS ecosolva (fronte Elevia + DernièreChance, et tout
+# projet futur sur cette même machine). Extrait du docker-compose.yml
+# d'Elevia, qui avait jusqu'ici son propre Traefik privé lié aux ports 80/443
+# de l'hôte - impossible d'en faire tourner un second pour DernièreChance sur
+# la même machine.
+#
+# Ce compose est indépendant : il ne connaît ni Elevia ni DernièreChance.
+# Chaque projet applicatif rejoint le réseau `ecosolva-web` créé ici et pose
+# ses propres labels `traefik.*` sur ses services - voir leurs docker-compose.yml.
+#
+# Ce fichier vit dans le repo DernièreChance par commodité (c'est le projet
+# qui a motivé l'extraction) mais n'est ni buildé ni déployé par le
+# deploy.sh/CI de DernièreChance. Déploiement manuel sur le VPS :
+#
+#   cd infra/shared-traefik
+#   docker compose up -d
+#
+# `traefik_certs` réutilise le volume `elevia_traefik_certs` existant (créé
+# par l'ancien Traefik d'Elevia) pour ne pas re-demander de certificats
+# Let's Encrypt sur les domaines déjà validés.
+
+services:
+  traefik:
+    image: traefik:v3.7
+    container_name: ecosolva-traefik
+    restart: unless-stopped
+    environment:
+      DOCKER_API_VERSION: "1.41"
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=ecosolva-web"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@ecosolva.com}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--log.level=INFO"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_certs:/letsencrypt
+    networks:
+      - ecosolva-web
+
+networks:
+  ecosolva-web:
+    name: ecosolva-web
+
+volumes:
+  traefik_certs:
+    external: true
+    name: elevia_traefik_certs

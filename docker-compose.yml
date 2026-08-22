@@ -1,0 +1,145 @@
+# DernièreChance - orchestration
+#
+# `dev` and `prod` are separate, mutually exclusive profiles - postgres is the
+# only service with no profile (shared by both).
+#
+# Unlike Elevia, prod images are NOT built on the target host: the VPS this
+# runs on (shared with Elevia) has a single vCPU and limited disk, so a
+# second `cargo build --release` on every deploy would degrade Elevia too.
+# CI (.github/workflows/docker-publish.yml) builds and pushes both images to
+# GHCR on every push to main; prod here only pulls.
+#
+# Traefik itself is NOT part of this file. This VPS already runs a shared
+# Traefik instance (fronting Elevia too) on the external network below -
+# see infra/shared-traefik/ at the repo root of the ops setup for that piece.
+#
+# Usage:
+#   cp .env.example .env                          # then adjust secrets/domain
+#   docker compose --profile prod pull
+#   docker compose --profile prod up -d           # production: served via the shared Traefik on DOMAIN/API_DOMAIN
+#   docker compose --profile dev up --build       # local hot-reload dev mode (no Traefik, direct ports)
+#
+# Production DNS: point both DOMAIN and API_DOMAIN (A records) at the shared
+# host before starting.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: derniere-chance-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-derniere_chance}
+      POSTGRES_USER: ${POSTGRES_USER:-derniere_chance}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-derniere_chance} -d ${POSTGRES_DB:-derniere_chance}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      # Internal only - postgres has no business on the shared Traefik network.
+      - derniere-chance-network
+
+  # --- Backend: production image pulled from GHCR (prod profile only), fronted by the shared Traefik ---
+  backend:
+    image: ${BACKEND_IMAGE:-ghcr.io/gilmry/derniere-chance/backend:latest}
+    container_name: derniere-chance-backend
+    restart: unless-stopped
+    profiles: ["prod"]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-derniere_chance}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-derniere_chance}
+      JWT_SECRET: ${JWT_SECRET:-change-me-too-please-use-a-long-random-string}
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: 8080
+      RUST_LOG: ${RUST_LOG:-info}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - derniere-chance-network
+      - ecosolva-web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=ecosolva-web"
+      - "traefik.http.routers.derniere-chance-backend.rule=Host(`${API_DOMAIN:-api.derniere-chance.ecosolva.org}`)"
+      - "traefik.http.routers.derniere-chance-backend.entrypoints=websecure"
+      - "traefik.http.routers.derniere-chance-backend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.derniere-chance-backend.loadbalancer.server.port=8080"
+
+  # --- Backend: dev mode with hot reload (cargo-watch), direct port, no Traefik ---
+  backend-dev:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: derniere-chance-backend-dev
+    profiles: ["dev"]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-derniere_chance}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-derniere_chance}
+      JWT_SECRET: ${JWT_SECRET:-change-me-too-please-use-a-long-random-string}
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: 8080
+      RUST_LOG: debug
+      RUST_BACKTRACE: "1"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend:/app
+      - cargo_cache:/usr/local/cargo/registry
+      - target_cache:/app/target
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - derniere-chance-network
+
+  # --- Frontend: production image pulled from GHCR (prod profile only), fronted by the shared Traefik ---
+  frontend:
+    image: ${FRONTEND_IMAGE:-ghcr.io/gilmry/derniere-chance/frontend:latest}
+    container_name: derniere-chance-frontend
+    restart: unless-stopped
+    profiles: ["prod"]
+    depends_on:
+      - backend
+    networks:
+      - ecosolva-web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=ecosolva-web"
+      - "traefik.http.routers.derniere-chance-frontend.rule=Host(`${DOMAIN:-derniere-chance.ecosolva.org}`)"
+      - "traefik.http.routers.derniere-chance-frontend.entrypoints=websecure"
+      - "traefik.http.routers.derniere-chance-frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.derniere-chance-frontend.loadbalancer.server.port=80"
+
+  # --- Frontend: dev mode with hot reload (Astro dev server), direct port, no Traefik ---
+  frontend-dev:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: derniere-chance-frontend-dev
+    profiles: ["dev"]
+    environment:
+      PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:8080}
+    ports:
+      - "${FRONTEND_PORT:-4322}:4321"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend-dev
+    networks:
+      - derniere-chance-network
+
+networks:
+  derniere-chance-network:
+    driver: bridge
+  # Pre-existing network created by the shared Traefik stack on the VPS -
+  # must already exist (docker network create ecosolva-web), not owned here.
+  ecosolva-web:
+    external: true
+
+volumes:
+  postgres_data:
+  cargo_cache:
+  target_cache:
