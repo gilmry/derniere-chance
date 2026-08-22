@@ -4,6 +4,10 @@
 /frontend/.astro
 /frontend/.env
 
+# Rust
+/backend/target
+/backend/.env
+
 # Editors / OS
 .DS_Store
 *.swp

@@ -1,0 +1,98 @@
+use std::sync::Arc;
+
+use actix_cors::Cors;
+use actix_web::{web, App, HttpServer};
+
+use derniere_chance_api::application::ports::EmailSender;
+use derniere_chance_api::application::use_cases::{
+    CatalogUseCases, ConsumerAuthUseCases, DashboardUseCases, MerchantAuthUseCases,
+    ProductUseCases, ReservationUseCases, SubscriptionUseCases,
+};
+use derniere_chance_api::infrastructure::database::create_pool;
+use derniere_chance_api::infrastructure::database::repositories::{
+    PostgresConsumerRepository, PostgresMerchantRepository, PostgresNotificationRepository,
+    PostgresProductRepository, PostgresReservationRepository, PostgresSubscriptionRepository,
+};
+use derniere_chance_api::infrastructure::email::LoggingEmailSender;
+use derniere_chance_api::infrastructure::web::{configure_routes, AppState};
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    dotenvy::dotenv().ok();
+    tracing_subscriber::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .init();
+
+    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let jwt_secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
+    let host = std::env::var("SERVER_HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
+    let port: u16 = std::env::var("SERVER_PORT")
+        .unwrap_or_else(|_| "8080".to_string())
+        .parse()
+        .expect("SERVER_PORT must be a valid port number");
+
+    let db = create_pool(&database_url)
+        .await
+        .expect("failed to connect to database");
+
+    sqlx::migrate!("./migrations")
+        .run(&db)
+        .await
+        .expect("failed to run database migrations");
+
+    let merchant_repo = Arc::new(PostgresMerchantRepository::new(db.clone()));
+    let consumer_repo = Arc::new(PostgresConsumerRepository::new(db.clone()));
+    let product_repo = Arc::new(PostgresProductRepository::new(db.clone()));
+    let subscription_repo = Arc::new(PostgresSubscriptionRepository::new(db.clone()));
+    let reservation_repo = Arc::new(PostgresReservationRepository::new(db.clone()));
+    let notification_repo = Arc::new(PostgresNotificationRepository::new(db.clone()));
+
+    // No transactional-email provider is wired up yet (see VISION.md §8) -
+    // this adapter only logs. Swap it for a Resend/SMTP implementation of
+    // `EmailSender` when that's decided.
+    let email_sender: Arc<dyn EmailSender> = Arc::new(LoggingEmailSender);
+
+    let state = web::Data::new(AppState {
+        merchant_auth_use_cases: Arc::new(MerchantAuthUseCases::new(
+            merchant_repo.clone(),
+            jwt_secret.clone(),
+        )),
+        consumer_auth_use_cases: Arc::new(ConsumerAuthUseCases::new(
+            consumer_repo.clone(),
+            jwt_secret,
+        )),
+        catalog_use_cases: Arc::new(CatalogUseCases::new(
+            product_repo.clone(),
+            merchant_repo.clone(),
+        )),
+        product_use_cases: Arc::new(ProductUseCases::new(
+            product_repo.clone(),
+            merchant_repo.clone(),
+            subscription_repo.clone(),
+            notification_repo,
+            email_sender,
+        )),
+        subscription_use_cases: Arc::new(SubscriptionUseCases::new(
+            subscription_repo,
+            merchant_repo,
+        )),
+        reservation_use_cases: Arc::new(ReservationUseCases::new(
+            reservation_repo.clone(),
+            product_repo,
+        )),
+        dashboard_use_cases: Arc::new(DashboardUseCases::new(reservation_repo)),
+    });
+
+    tracing::info!("derniere-chance-api listening on {host}:{port}");
+
+    HttpServer::new(move || {
+        App::new()
+            .app_data(state.clone())
+            .wrap(Cors::permissive())
+            .wrap(tracing_actix_web::TracingLogger::default())
+            .configure(configure_routes)
+    })
+    .bind((host, port))?
+    .run()
+    .await
+}

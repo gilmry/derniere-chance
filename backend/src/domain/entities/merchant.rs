@@ -1,0 +1,17 @@
+use chrono::{DateTime, Utc};
+use rust_decimal::Decimal;
+use serde::Serialize;
+use uuid::Uuid;
+
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+pub struct Merchant {
+    pub id: Uuid,
+    pub nom: String,
+    pub adresse: String,
+    pub categorie: String,
+    pub note: Option<Decimal>,
+    pub email: String,
+    #[serde(skip_serializing)]
+    pub password_hash: String,
+    pub created_at: DateTime<Utc>,
+}

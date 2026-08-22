@@ -83,12 +83,12 @@ Reprise de la stack Elevia (`projects/elevia`), qui a fait ses preuves en prod c
 
 - **Backend** : Rust + Actix-web, architecture hexagonale (`domain/` / `application/` / `infrastructure/`), PostgreSQL via SQLx (migrations auto au démarrage), auth JWT + bcrypt.
 - **Frontend** : Astro + Svelte, PWA (manifest.json + service-worker.js), offline-friendly comme Elevia.
-- **Déploiement** : Docker Compose (profils dev/prod), Traefik + Let's Encrypt en prod, déploiement GitOps par cron (comme Elevia/KoproGo/OpenMajor).
+- **Déploiement** : Docker Compose (profils dev/prod), Traefik + Let's Encrypt en prod, déploiement GitOps par cron (comme Elevia/KoproGo/OpenMajor). Pas encore mis en place pour DernièreChance (`backend/` tourne pour l'instant en local uniquement).
 
-**Briques nouvelles à spécifier** (absentes d'Elevia) :
-- Notification email transactionnel (ex. Resend, ou SMTP classique) — à trancher lors de l'implémentation backend.
-- Réservation : décrément de quantité en transaction SQL (éviter la survente si deux consommateurs réservent en même temps).
-- Géolocalisation : la version prototype du frontend (`frontend/`) affiche des distances statiques (mock) ; le calcul réel (position du navigateur + distance au commerçant) reste à implémenter côté backend/frontend.
+Le backend (`backend/`) est implémenté : entités de domaine, ports (repositories + `EmailSender`), use cases et adaptateurs Postgres, testé de bout en bout (inscription, publication avec notification des abonnés, réservation avec décrément atomique du stock, validation du code de retrait, dashboards). Statut des briques identifiées :
+- **Notification email** : le port `EmailSender` existe et le flux de publication l'appelle pour chaque abonné, mais l'adaptateur branché (`LoggingEmailSender`) ne fait que logguer — aucun envoi réel. Reste à choisir un fournisseur (ex. Resend, ou SMTP) et écrire l'adaptateur derrière ce même port.
+- **Réservation** : fait — décrément de quantité atomique en SQL (`UPDATE ... WHERE statut='publie' AND quantite>0`), empêche la survente si deux consommateurs réservent en même temps.
+- **Géolocalisation** : toujours pas implémentée. Le frontend prototype affiche des distances statiques (mock) et le backend ne stocke aucune coordonnée ; le calcul réel (position du navigateur + distance au commerçant) reste à faire des deux côtés.
 
 ## 9. Hors scope / Roadmap v2
 
