@@ -14,6 +14,7 @@
   let map: import("leaflet").Map | undefined;
   let markersLayer: import("leaflet").LayerGroup | undefined;
   let L: typeof import("leaflet") | undefined;
+  let mapError = "";
 
   function drawMarkers() {
     if (!map || !L || !markersLayer) return;
@@ -65,28 +66,41 @@
   }
 
   onMount(async () => {
-    L = await import("leaflet");
+    try {
+      L = await import("leaflet");
 
-    // Les icônes par défaut de Leaflet référencent des chemins relatifs au
-    // package qui cassent une fois bundlés (problème connu) - on les
-    // ré-associe explicitement aux assets importés par Vite.
-    const iconRetinaUrl = (await import("leaflet/dist/images/marker-icon-2x.png")).default;
-    const iconUrl = (await import("leaflet/dist/images/marker-icon.png")).default;
-    const shadowUrl = (await import("leaflet/dist/images/marker-shadow.png")).default;
-    L.Icon.Default.mergeOptions({ iconRetinaUrl, iconUrl, shadowUrl });
+      map = L.map(container).setView(
+        coords ? [coords.lat, coords.lon] : FALLBACK_CENTER,
+        14,
+      );
+      // Tuiles OSM publiques : gratuites, attribution obligatoire (ci-dessous),
+      // usage raisonnable seulement (cf. OSM tile usage policy) - à remplacer
+      // par un fournisseur dédié (MapTiler, Mapbox...) si le trafic grossit.
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxZoom: 19,
+      }).addTo(map);
+      markersLayer = L.layerGroup().addTo(map);
 
-    map = L.map(container).setView(
-      coords ? [coords.lat, coords.lon] : FALLBACK_CENTER,
-      14,
-    );
-    // Tuiles OSM publiques : gratuites, attribution obligatoire (ci-dessous),
-    // usage raisonnable seulement (cf. OSM tile usage policy) - à remplacer
-    // par un fournisseur dédié (MapTiler, Mapbox...) si le trafic grossit.
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-      maxZoom: 19,
-    }).addTo(map);
-    markersLayer = L.layerGroup().addTo(map);
+      // Le conteneur (flex + min-height) peut ne pas avoir sa taille finale
+      // au moment où Leaflet lit ses dimensions - sans ce recalcul, la carte
+      // reste souvent grise/blanche sans rien de dessiné dessus.
+      requestAnimationFrame(() => map?.invalidateSize());
+      setTimeout(() => map?.invalidateSize(), 250);
+
+      // Les icônes par défaut de Leaflet référencent des chemins relatifs au
+      // package qui cassent une fois bundlés (problème connu) - on les
+      // ré-associe explicitement aux assets importés par Vite. Fait après
+      // la création de la carte : un échec ici ne doit pas empêcher les
+      // tuiles de s'afficher.
+      const iconRetinaUrl = (await import("leaflet/dist/images/marker-icon-2x.png")).default;
+      const iconUrl = (await import("leaflet/dist/images/marker-icon.png")).default;
+      const shadowUrl = (await import("leaflet/dist/images/marker-shadow.png")).default;
+      L.Icon.Default.mergeOptions({ iconRetinaUrl, iconUrl, shadowUrl });
+    } catch (err) {
+      console.error("OffersMap init failed", err);
+      mapError = "La carte n'a pas pu se charger.";
+    }
   });
 
   onDestroy(() => {
@@ -102,12 +116,28 @@
   }
 </script>
 
+{#if mapError}
+  <p class="map-error">{mapError}</p>
+{/if}
 <div bind:this={container} class="leaflet-container-wrap"></div>
 
 <style>
   .leaflet-container-wrap {
     width: 100%;
     height: 100%;
+    min-height: 320px;
+  }
+
+  .map-error {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-muted);
+    font-size: 13px;
+    padding: 20px;
+    text-align: center;
   }
 
   :global(.leaflet-container) {
