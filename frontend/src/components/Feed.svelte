@@ -1,5 +1,6 @@
 <script lang="ts">
   import Photo from "./Photo.svelte";
+  import OffersMap from "./OffersMap.svelte";
   import { listOffers, formatPrice, formatDistance, ApiError, type Offer } from "../lib/api";
   import { getBrowserPosition, type Coords } from "../lib/geoloc";
 
@@ -72,7 +73,7 @@
     <p class="state error">{loadError}</p>
   {:else if view === "carte"}
     <div class="map">
-      <Photo shape="rect" label="Carte des commerçants à proximité" />
+      <OffersMap {offers} {coords} />
       {#if featured}
         <a class="map-card" href={`/offre?id=${featured.id}`}>
           <div class="map-card-photo">

@@ -53,6 +53,8 @@ export interface Offer {
   marchand_nom: string;
   marchand_categorie: string;
   marchand_note: string | null;
+  marchand_latitude: number | null;
+  marchand_longitude: number | null;
   distance_km: number | null;
   nom: string;
   description: string;
