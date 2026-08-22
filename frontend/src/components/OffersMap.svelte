@@ -15,6 +15,7 @@
   let markersLayer: import("leaflet").LayerGroup | undefined;
   let L: typeof import("leaflet") | undefined;
   let mapError = "";
+  let resizeObserver: ResizeObserver | undefined;
 
   function drawMarkers() {
     if (!map || !L || !markersLayer) return;
@@ -82,11 +83,14 @@
       }).addTo(map);
       markersLayer = L.layerGroup().addTo(map);
 
-      // Le conteneur (flex + min-height) peut ne pas avoir sa taille finale
-      // au moment où Leaflet lit ses dimensions - sans ce recalcul, la carte
-      // reste souvent grise/blanche sans rien de dessiné dessus.
-      requestAnimationFrame(() => map?.invalidateSize());
-      setTimeout(() => map?.invalidateSize(), 250);
+      // Le conteneur (flex + min-height) peut continuer à changer de taille
+      // après l'init de Leaflet (polices qui finissent de charger, rotation
+      // d'écran, apparition de la barre d'adresse mobile...) - sans ce
+      // recalcul continu, la carte ne couvre que la taille qu'elle avait au
+      // moment de sa création (ex. la moitié de l'écran si le layout n'était
+      // pas encore stabilisé).
+      resizeObserver = new ResizeObserver(() => map?.invalidateSize());
+      resizeObserver.observe(container);
 
       // Les icônes par défaut de Leaflet référencent des chemins relatifs au
       // package qui cassent une fois bundlés (problème connu) - on les
@@ -104,6 +108,7 @@
   });
 
   onDestroy(() => {
+    resizeObserver?.disconnect();
     map?.remove();
   });
 
