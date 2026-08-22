@@ -1,6 +1,8 @@
 // Client API pour le backend DernièreChance. Remplace les données mockées de
 // mock.ts au fur et à mesure du branchement (voir VISION.md).
 
+import type { Coords } from "./geoloc";
+
 const API_URL = import.meta.env.PUBLIC_API_URL ?? "http://localhost:8080";
 
 export class ApiError extends Error {
@@ -51,6 +53,7 @@ export interface Offer {
   marchand_nom: string;
   marchand_categorie: string;
   marchand_note: string | null;
+  distance_km: number | null;
   nom: string;
   description: string;
   prix_initial: string;
@@ -68,6 +71,9 @@ export interface Merchant {
   adresse: string;
   categorie: string;
   note: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  distance_km: number | null;
 }
 
 export interface Product {
@@ -115,17 +121,26 @@ export interface AuthResponse {
 
 // --- Catalogue public ---
 
-export function listOffers(categorie?: string): Promise<Offer[]> {
-  const qs = categorie && categorie !== "Tout" ? `?categorie=${encodeURIComponent(categorie)}` : "";
-  return apiFetch(`/offres${qs}`);
+function geoQueryParams(coords?: Coords | null): string {
+  return coords ? `lat=${coords.lat}&lon=${coords.lon}` : "";
 }
 
-export function getOffer(id: string): Promise<Offer> {
-  return apiFetch(`/offres/${id}`);
+export function listOffers(categorie?: string, coords?: Coords | null): Promise<Offer[]> {
+  const parts = [];
+  if (categorie && categorie !== "Tout") parts.push(`categorie=${encodeURIComponent(categorie)}`);
+  const geo = geoQueryParams(coords);
+  if (geo) parts.push(geo);
+  return apiFetch(`/offres${parts.length ? `?${parts.join("&")}` : ""}`);
 }
 
-export function getMerchantProfile(id: string): Promise<MerchantProfile> {
-  return apiFetch(`/marchands/${id}`);
+export function getOffer(id: string, coords?: Coords | null): Promise<Offer> {
+  const geo = geoQueryParams(coords);
+  return apiFetch(`/offres/${id}${geo ? `?${geo}` : ""}`);
+}
+
+export function getMerchantProfile(id: string, coords?: Coords | null): Promise<MerchantProfile> {
+  const geo = geoQueryParams(coords);
+  return apiFetch(`/marchands/${id}${geo ? `?${geo}` : ""}`);
 }
 
 // --- Auth marchand ---
@@ -136,6 +151,8 @@ export function merchantRegister(dto: {
   categorie: string;
   email: string;
   password: string;
+  latitude?: number | null;
+  longitude?: number | null;
 }): Promise<AuthResponse> {
   return apiFetch("/marchands/inscription", { method: "POST", body: dto });
 }
@@ -214,4 +231,10 @@ export function validatePickup(code: string, token: string): Promise<void> {
 export function formatPrice(value: string | number): string {
   const n = typeof value === "string" ? parseFloat(value) : value;
   return `${n.toFixed(2).replace(".", ",")} €`;
+}
+
+export function formatDistance(km: number | null | undefined): string | null {
+  if (km === null || km === undefined) return null;
+  if (km < 1) return `${Math.round(km * 1000)} m`;
+  return `${km.toFixed(1).replace(".", ",")} km`;
 }

@@ -8,6 +8,9 @@
 /backend/target
 /backend/.env
 
+# Local docker-compose env (root)
+/.env
+
 # Editors / OS
 .DS_Store
 *.swp

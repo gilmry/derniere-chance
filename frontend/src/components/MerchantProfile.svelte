@@ -7,11 +7,13 @@
     unfollowMerchant,
     listFollowedMerchants,
     formatPrice,
+    formatDistance,
     ApiError,
     type MerchantProfile,
   } from "../lib/api";
   import { getConsumerToken } from "../lib/auth";
   import { getQueryParam } from "../lib/params";
+  import { getBrowserPosition } from "../lib/geoloc";
 
   let merchant: MerchantProfile | null = null;
   let loading = true;
@@ -29,7 +31,8 @@
     }
     merchantId = id;
     try {
-      merchant = await getMerchantProfile(id);
+      const coords = await getBrowserPosition();
+      merchant = await getMerchantProfile(id, coords);
       const token = getConsumerToken();
       if (token) {
         const followed = await listFollowedMerchants(token);
@@ -81,7 +84,7 @@
         <div class="identity-text">
           <h1>{merchant.nom}</h1>
           <p class="subtitle">
-            {merchant.categorie} · {merchant.adresse}{merchant.note ? ` · ⭐ ${merchant.note}` : ""}
+            {merchant.categorie} · {merchant.adresse}{merchant.note ? ` · ⭐ ${merchant.note}` : ""}{formatDistance(merchant.distance_km) ? ` · ${formatDistance(merchant.distance_km)}` : ""}
           </p>
         </div>
       </div>

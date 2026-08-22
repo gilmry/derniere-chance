@@ -1,6 +1,7 @@
 <script lang="ts">
   import { merchantLogin, merchantRegister, ApiError } from "../lib/api";
   import { setMerchantToken } from "../lib/auth";
+  import { getBrowserPosition } from "../lib/geoloc";
 
   let mode: "login" | "register" = "login";
   let email = "";
@@ -16,9 +17,21 @@
     error = "";
     loading = true;
     try {
-      const auth = mode === "register"
-        ? await merchantRegister({ nom, adresse, categorie, email, password })
-        : await merchantLogin(email, password);
+      let auth;
+      if (mode === "register") {
+        const coords = await getBrowserPosition();
+        auth = await merchantRegister({
+          nom,
+          adresse,
+          categorie,
+          email,
+          password,
+          latitude: coords?.lat,
+          longitude: coords?.lon,
+        });
+      } else {
+        auth = await merchantLogin(email, password);
+      }
       setMerchantToken(auth.token);
       window.location.href = "/pro/dashboard";
     } catch (err) {

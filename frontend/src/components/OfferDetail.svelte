@@ -1,9 +1,10 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import Photo from "./Photo.svelte";
-  import { getOffer, reserveOffer, ApiError, formatPrice, type Offer } from "../lib/api";
+  import { getOffer, reserveOffer, ApiError, formatPrice, formatDistance, type Offer } from "../lib/api";
   import { getConsumerToken } from "../lib/auth";
   import { getQueryParam } from "../lib/params";
+  import { getBrowserPosition } from "../lib/geoloc";
 
   let offer: Offer | null = null;
   let loading = true;
@@ -19,7 +20,8 @@
       return;
     }
     try {
-      offer = await getOffer(id);
+      const coords = await getBrowserPosition();
+      offer = await getOffer(id, coords);
     } catch (err) {
       loadError = err instanceof ApiError ? err.message : "Impossible de charger cette offre.";
     } finally {
@@ -73,6 +75,7 @@
         <h1>{offer.nom}</h1>
         <p class="subtitle">
           <a href={`/marchand?id=${offer.marchand_id}`}>{offer.marchand_nom}</a> · {offer.marchand_categorie}
+          {#if formatDistance(offer.distance_km)} · {formatDistance(offer.distance_km)}{/if}
         </p>
       </div>
       {#if offer.description}<p class="description">{offer.description}</p>{/if}

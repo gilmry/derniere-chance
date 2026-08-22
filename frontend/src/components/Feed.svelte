@@ -1,20 +1,23 @@
 <script lang="ts">
   import Photo from "./Photo.svelte";
-  import { listOffers, formatPrice, ApiError, type Offer } from "../lib/api";
+  import { listOffers, formatPrice, formatDistance, ApiError, type Offer } from "../lib/api";
+  import { getBrowserPosition, type Coords } from "../lib/geoloc";
 
   const categories = ["Tout", "Boulangerie", "Primeur"];
 
-  let view: "carte" | "liste" = "carte";
+  let view: "carte" | "liste" = "liste";
   let category = "Tout";
   let offers: Offer[] = [];
   let loading = true;
   let loadError = "";
+  let coords: Coords | null = null;
+  let coordsReady = false;
 
   async function load() {
     loading = true;
     loadError = "";
     try {
-      offers = await listOffers(category === "Tout" ? undefined : category);
+      offers = await listOffers(category === "Tout" ? undefined : category, coords);
     } catch (err) {
       loadError = err instanceof ApiError ? err.message : "Impossible de charger les offres.";
     } finally {
@@ -22,7 +25,15 @@
     }
   }
 
-  $: category, load();
+  getBrowserPosition().then((c) => {
+    coords = c;
+    coordsReady = true;
+  });
+
+  $: if (coordsReady) {
+    category;
+    load();
+  }
 
   function pickupEnd(offer: Offer): string {
     return new Date(offer.retrait_fin).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
@@ -69,7 +80,10 @@
           </div>
           <div class="map-card-info">
             <div class="map-card-name">{featured.marchand_nom}</div>
-            <div class="map-card-detail">{featured.nom} · retrait {pickupEnd(featured)}</div>
+            <div class="map-card-detail">
+              {featured.nom} · retrait {pickupEnd(featured)}
+              {#if formatDistance(featured.distance_km)} · {formatDistance(featured.distance_km)}{/if}
+            </div>
           </div>
           <div class="badge-discount">-{featured.reduction_pct}%</div>
         </a>
@@ -84,7 +98,10 @@
           </div>
           <div class="offer-info">
             <div class="offer-name">{offer.marchand_nom}</div>
-            <div class="offer-detail">{offer.nom} · {offer.quantite} restants</div>
+            <div class="offer-detail">
+              {offer.nom} · {offer.quantite} restants
+              {#if formatDistance(offer.distance_km)} · {formatDistance(offer.distance_km)}{/if}
+            </div>
             <div class="price-row">
               <span class="price-old">{formatPrice(offer.prix_initial)}</span>
               <span class="price-new">{formatPrice(offer.prix_demarque)}</span>

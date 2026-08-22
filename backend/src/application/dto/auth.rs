@@ -19,6 +19,10 @@ pub struct RegisterMerchantRequest {
     pub categorie: String,
     pub email: String,
     pub password: String,
+    /// Captée via navigator.geolocation côté frontend au moment de
+    /// l'inscription - optionnelle (refus possible), voir VISION.md §8.
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
 }
 
 #[derive(Debug, Deserialize)]

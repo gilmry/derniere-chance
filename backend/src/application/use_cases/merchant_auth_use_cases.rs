@@ -62,6 +62,8 @@ impl MerchantAuthUseCases {
                 categorie: dto.categorie,
                 email: dto.email,
                 password_hash,
+                latitude: dto.latitude,
+                longitude: dto.longitude,
             })
             .await?;
 

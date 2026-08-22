@@ -13,5 +13,7 @@ pub struct Merchant {
     pub email: String,
     #[serde(skip_serializing)]
     pub password_hash: String,
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
     pub created_at: DateTime<Utc>,
 }

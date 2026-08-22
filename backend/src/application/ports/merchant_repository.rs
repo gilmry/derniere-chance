@@ -10,6 +10,8 @@ pub struct NewMerchant {
     pub categorie: String,
     pub email: String,
     pub password_hash: String,
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
 }
 
 #[async_trait]

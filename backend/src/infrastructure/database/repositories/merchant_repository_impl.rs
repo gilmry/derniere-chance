@@ -19,15 +19,17 @@ impl PostgresMerchantRepository {
 impl MerchantRepository for PostgresMerchantRepository {
     async fn create(&self, new: NewMerchant) -> Result<Merchant, RepoError> {
         sqlx::query_as::<_, Merchant>(
-            "INSERT INTO marchands (nom, adresse, categorie, email, password_hash)
-             VALUES ($1, $2, $3, $4, $5)
-             RETURNING id, nom, adresse, categorie, note, email, password_hash, created_at",
+            "INSERT INTO marchands (nom, adresse, categorie, email, password_hash, latitude, longitude)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             RETURNING id, nom, adresse, categorie, note, email, password_hash, latitude, longitude, created_at",
         )
         .bind(new.nom)
         .bind(new.adresse)
         .bind(new.categorie)
         .bind(new.email)
         .bind(new.password_hash)
+        .bind(new.latitude)
+        .bind(new.longitude)
         .fetch_one(&self.pool)
         .await
         .map_err(Into::into)
@@ -35,7 +37,7 @@ impl MerchantRepository for PostgresMerchantRepository {
 
     async fn find_by_email(&self, email: &str) -> Result<Option<Merchant>, RepoError> {
         sqlx::query_as::<_, Merchant>(
-            "SELECT id, nom, adresse, categorie, note, email, password_hash, created_at
+            "SELECT id, nom, adresse, categorie, note, email, password_hash, latitude, longitude, created_at
              FROM marchands WHERE email = $1",
         )
         .bind(email)
@@ -46,7 +48,7 @@ impl MerchantRepository for PostgresMerchantRepository {
 
     async fn find_by_id(&self, id: Uuid) -> Result<Option<Merchant>, RepoError> {
         sqlx::query_as::<_, Merchant>(
-            "SELECT id, nom, adresse, categorie, note, email, password_hash, created_at
+            "SELECT id, nom, adresse, categorie, note, email, password_hash, latitude, longitude, created_at
              FROM marchands WHERE id = $1",
         )
         .bind(id)
