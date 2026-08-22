@@ -1,0 +1,18 @@
+{
+  "name": "Dernière Chance",
+  "short_name": "Dernière Chance",
+  "description": "Réserve les invendus de tes commerçants préférés avant la fermeture.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FBF3E7",
+  "theme_color": "#2E7D5B",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

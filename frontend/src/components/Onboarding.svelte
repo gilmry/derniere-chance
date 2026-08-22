@@ -1,0 +1,84 @@
+<script lang="ts">
+  import Photo from "./Photo.svelte";
+</script>
+
+<div class="screen">
+  <div class="hero">
+    <div class="hero-photo">
+      <Photo shape="rounded" radius={28} label="Illustration invendus sauvés" />
+    </div>
+    <h1>Sauve un panier,<br />régale-toi malin.</h1>
+    <p class="lead">
+      Repère les commerçants proches de chez toi et récupère leurs invendus à petit prix.
+    </p>
+  </div>
+  <div class="actions">
+    <a class="btn btn-primary" href="/feed">Créer un compte</a>
+    <a class="btn btn-secondary" href="/feed">J'ai déjà un compte</a>
+    <div class="dots">
+      <span class="dot dot--active"></span>
+      <span class="dot"></span>
+      <span class="dot"></span>
+    </div>
+  </div>
+</div>
+
+<style>
+  .screen {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 28px 24px;
+    gap: 24px;
+  }
+
+  .hero {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    text-align: center;
+  }
+
+  .hero-photo {
+    width: 220px;
+    height: 220px;
+  }
+
+  h1 {
+    font-size: 26px;
+  }
+
+  .lead {
+    font-size: 15px;
+    color: var(--color-muted);
+    line-height: 1.5;
+  }
+
+  .actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .dots {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    padding-top: 4px;
+  }
+
+  .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--color-border);
+  }
+
+  .dot--active {
+    width: 20px;
+    background: var(--color-primary);
+  }
+</style>

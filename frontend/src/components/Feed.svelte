@@ -1,0 +1,248 @@
+<script lang="ts">
+  import Photo from "./Photo.svelte";
+  import {
+    offers,
+    merchants,
+    getMerchant,
+    discountPercent,
+    formatPrice,
+  } from "../lib/mock";
+
+  const categories = ["Tout", "Boulangerie", "Primeur"];
+
+  let view: "carte" | "liste" = "carte";
+  let category = "Tout";
+
+  $: visibleOffers = offers.filter((offer) => {
+    if (offer.status !== "active") return false;
+    if (category === "Tout") return true;
+    return getMerchant(offer.merchantId)?.category === category;
+  });
+
+  $: featured = visibleOffers[0];
+  $: featuredMerchant = featured ? getMerchant(featured.merchantId) : undefined;
+</script>
+
+<div class="screen">
+  <div class="header">
+    <div class="header-row">
+      <h1>Autour de toi</h1>
+      <div class="toggle">
+        <button
+          class:active={view === "carte"}
+          on:click={() => (view = "carte")}
+        >Carte</button>
+        <button
+          class:active={view === "liste"}
+          on:click={() => (view = "liste")}
+        >Liste</button>
+      </div>
+    </div>
+    <div class="chips">
+      {#each categories as cat}
+        <button class="chip" class:active={category === cat} on:click={() => (category = cat)}>
+          {cat === "Boulangerie" ? "🥐 Boulangerie" : cat === "Primeur" ? "🥕 Primeur" : cat}
+        </button>
+      {/each}
+    </div>
+  </div>
+
+  {#if view === "carte"}
+    <div class="map">
+      <Photo shape="rect" label="Carte des commerçants à proximité" />
+      {#if featured && featuredMerchant}
+        <a class="map-card" href={`/offre/${featured.id}`}>
+          <div class="map-card-photo">
+            <Photo shape="rounded" radius={12} label="Photo" />
+          </div>
+          <div class="map-card-info">
+            <div class="map-card-name">{featuredMerchant.name}</div>
+            <div class="map-card-detail">Panier surprise · retrait {featured.pickupWindow.split("–")[1]?.trim() ?? featured.pickupWindow}</div>
+          </div>
+          <div class="badge-discount">-{discountPercent(featured)}%</div>
+        </a>
+      {/if}
+    </div>
+  {:else}
+    <div class="list">
+      {#each visibleOffers as offer}
+        {@const merchant = getMerchant(offer.merchantId)}
+        <a class="card offer-row" href={`/offre/${offer.id}`}>
+          <div class="offer-photo">
+            <Photo shape="rounded" radius={14} label="Photo panier" />
+          </div>
+          <div class="offer-info">
+            <div class="offer-name">{merchant?.name}</div>
+            <div class="offer-detail">{offer.title} · {offer.quantityLeft} restants</div>
+            <div class="price-row">
+              <span class="price-old">{formatPrice(offer.priceOriginal)}</span>
+              <span class="price-new">{formatPrice(offer.pricePromo)}</span>
+            </div>
+          </div>
+        </a>
+      {/each}
+      {#if visibleOffers.length === 0}
+        <p class="empty">Aucune offre dans cette catégorie pour le moment.</p>
+      {/if}
+    </div>
+  {/if}
+</div>
+
+<style>
+  .screen {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .header {
+    padding: 8px 20px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  h1 {
+    font-size: 22px;
+  }
+
+  .toggle {
+    display: flex;
+    background: var(--color-chip);
+    border-radius: 12px;
+    padding: 3px;
+    gap: 2px;
+  }
+
+  .toggle button {
+    padding: 6px 12px;
+    border-radius: 10px;
+    border: none;
+    background: transparent;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-muted-light);
+    cursor: pointer;
+  }
+
+  .toggle button.active {
+    background: #fff;
+    color: var(--color-ink);
+    font-weight: 700;
+  }
+
+  .chips {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+  }
+
+  .chip.active {
+    background: var(--color-ink);
+    color: #fff;
+  }
+
+  .map {
+    position: relative;
+    flex: 1;
+    margin: 0 20px 16px;
+    border-radius: 20px;
+    overflow: hidden;
+    min-height: 320px;
+    background: #dce8da;
+  }
+
+  .map-card {
+    position: absolute;
+    left: 16px;
+    bottom: 16px;
+    right: 16px;
+    background: #fff;
+    border-radius: 16px;
+    padding: 14px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .map-card-photo {
+    width: 56px;
+    height: 56px;
+    flex-shrink: 0;
+  }
+
+  .map-card-info {
+    flex: 1;
+  }
+
+  .map-card-name {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--color-ink);
+  }
+
+  .map-card-detail {
+    font-size: 12px;
+    color: var(--color-muted);
+  }
+
+  .list {
+    flex: 1;
+    padding: 0 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .offer-row {
+    display: flex;
+    gap: 12px;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .offer-photo {
+    width: 72px;
+    height: 72px;
+    flex-shrink: 0;
+  }
+
+  .offer-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    justify-content: center;
+  }
+
+  .offer-name {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--color-ink);
+  }
+
+  .offer-detail {
+    font-size: 12px;
+    color: var(--color-muted);
+  }
+
+  .price-new {
+    font-size: 15px;
+  }
+
+  .empty {
+    color: var(--color-muted-light);
+    font-size: 14px;
+    text-align: center;
+    padding: 24px 0;
+  }
+</style>
