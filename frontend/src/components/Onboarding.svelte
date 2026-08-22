@@ -15,6 +15,7 @@
   <div class="actions">
     <a class="btn btn-primary" href="/compte?mode=register">Créer un compte</a>
     <a class="btn btn-secondary" href="/compte?mode=login">J'ai déjà un compte</a>
+    <a class="merchant-link" href="/pro/login">Vous êtes commerçant ? Accès pro</a>
     <div class="dots">
       <span class="dot dot--active"></span>
       <span class="dot"></span>
@@ -61,6 +62,14 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+  }
+
+  .merchant-link {
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-muted);
+    padding: 4px;
   }
 
   .dots {
