@@ -16,8 +16,7 @@
 <style>
   .bottom-nav {
     display: flex;
-    position: sticky;
-    bottom: 0;
+    margin-top: auto;
     border-top: 1px solid var(--color-border);
     background: var(--color-surface);
     flex-shrink: 0;
