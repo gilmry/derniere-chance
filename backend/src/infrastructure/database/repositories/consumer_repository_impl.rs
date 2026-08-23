@@ -48,4 +48,29 @@ impl ConsumerRepository for PostgresConsumerRepository {
         .await
         .map_err(Into::into)
     }
+
+    async fn list_all(&self) -> Result<Vec<Consumer>, RepoError> {
+        sqlx::query_as::<_, Consumer>(
+            "SELECT id, email, password_hash, created_at FROM consommateurs ORDER BY created_at DESC",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(Into::into)
+    }
+
+    async fn delete(&self, id: Uuid) -> Result<(), RepoError> {
+        sqlx::query("DELETE FROM consommateurs WHERE id = $1")
+            .bind(id)
+            .execute(&self.pool)
+            .await
+            .map(|_| ())
+            .map_err(Into::into)
+    }
+
+    async fn count(&self) -> Result<i64, RepoError> {
+        let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM consommateurs")
+            .fetch_one(&self.pool)
+            .await?;
+        Ok(count)
+    }
 }

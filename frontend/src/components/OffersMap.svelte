@@ -77,9 +77,14 @@
       // le marqueur est construit, un fix arrivé après (ex. déclenché par
       // markersLayer devenant truthy plus bas) ne rattrape pas les marqueurs
       // déjà créés avec l'icône par défaut cassée.
-      const iconRetinaUrl = (await import("leaflet/dist/images/marker-icon-2x.png")).default;
-      const iconUrl = (await import("leaflet/dist/images/marker-icon.png")).default;
-      const shadowUrl = (await import("leaflet/dist/images/marker-shadow.png")).default;
+      //
+      // Astro traite un import d'image comme un objet
+      // {src, width, height, format}, pas comme une simple URL - passer cet
+      // objet tel quel à Leaflet donne une icône "image cassée" (Leaflet
+      // s'attend à une string). Il faut extraire `.src`.
+      const iconRetinaUrl = (await import("leaflet/dist/images/marker-icon-2x.png")).default.src;
+      const iconUrl = (await import("leaflet/dist/images/marker-icon.png")).default.src;
+      const shadowUrl = (await import("leaflet/dist/images/marker-shadow.png")).default.src;
       L.Icon.Default.mergeOptions({ iconRetinaUrl, iconUrl, shadowUrl });
 
       map = L.map(container).setView(

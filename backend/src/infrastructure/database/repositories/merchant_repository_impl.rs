@@ -56,4 +56,30 @@ impl MerchantRepository for PostgresMerchantRepository {
         .await
         .map_err(Into::into)
     }
+
+    async fn list_all(&self) -> Result<Vec<Merchant>, RepoError> {
+        sqlx::query_as::<_, Merchant>(
+            "SELECT id, nom, adresse, categorie, note, email, password_hash, latitude, longitude, created_at
+             FROM marchands ORDER BY created_at DESC",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(Into::into)
+    }
+
+    async fn delete(&self, id: Uuid) -> Result<(), RepoError> {
+        sqlx::query("DELETE FROM marchands WHERE id = $1")
+            .bind(id)
+            .execute(&self.pool)
+            .await
+            .map(|_| ())
+            .map_err(Into::into)
+    }
+
+    async fn count(&self) -> Result<i64, RepoError> {
+        let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM marchands")
+            .fetch_one(&self.pool)
+            .await?;
+        Ok(count)
+    }
 }

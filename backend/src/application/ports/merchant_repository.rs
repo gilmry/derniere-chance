@@ -19,4 +19,10 @@ pub trait MerchantRepository: Send + Sync {
     async fn create(&self, new: NewMerchant) -> Result<Merchant, RepoError>;
     async fn find_by_email(&self, email: &str) -> Result<Option<Merchant>, RepoError>;
     async fn find_by_id(&self, id: Uuid) -> Result<Option<Merchant>, RepoError>;
+    /// Backoffice admin uniquement.
+    async fn list_all(&self) -> Result<Vec<Merchant>, RepoError>;
+    /// Backoffice admin uniquement - cascade sur produits/abonnements
+    /// (ON DELETE CASCADE), donc sur réservations/notifications par ricochet.
+    async fn delete(&self, id: Uuid) -> Result<(), RepoError>;
+    async fn count(&self) -> Result<i64, RepoError>;
 }

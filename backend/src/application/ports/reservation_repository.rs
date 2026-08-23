@@ -34,4 +34,6 @@ pub trait ReservationRepository: Send + Sync {
     async fn mark_recuperee(&self, id: Uuid) -> Result<Reservation, RepoError>;
     async fn merchant_daily_stats(&self, marchand_id: Uuid) -> Result<MerchantDailyStats, RepoError>;
     async fn consumer_stats(&self, consommateur_id: Uuid) -> Result<ConsumerStats, RepoError>;
+    /// Backoffice admin uniquement.
+    async fn count(&self) -> Result<i64, RepoError>;
 }

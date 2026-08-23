@@ -108,6 +108,31 @@ impl ProductRepository for PostgresProductRepository {
             .map_err(Into::into)
     }
 
+    async fn list_all(&self) -> Result<Vec<ProductWithMerchant>, RepoError> {
+        let query = format!("{OFFER_SELECT} ORDER BY p.created_at DESC");
+        sqlx::query_as::<_, ProductWithMerchant>(&query)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(Into::into)
+    }
+
+    async fn delete(&self, id: Uuid) -> Result<(), RepoError> {
+        sqlx::query("DELETE FROM produits WHERE id = $1")
+            .bind(id)
+            .execute(&self.pool)
+            .await
+            .map(|_| ())
+            .map_err(Into::into)
+    }
+
+    async fn count_active(&self) -> Result<i64, RepoError> {
+        let (count,): (i64,) =
+            sqlx::query_as("SELECT COUNT(*) FROM produits WHERE statut = 'publie'")
+                .fetch_one(&self.pool)
+                .await?;
+        Ok(count)
+    }
+
     async fn update_status(&self, id: Uuid, statut: ProductStatus) -> Result<Product, RepoError> {
         let query = format!(
             "UPDATE produits SET statut = $2 WHERE id = $1 RETURNING {PRODUCT_COLUMNS}"

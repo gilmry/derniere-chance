@@ -56,6 +56,11 @@ pub trait ProductRepository: Send + Sync {
         marchand_id: Uuid,
     ) -> Result<Vec<Product>, RepoError>;
     async fn list_by_merchant(&self, marchand_id: Uuid) -> Result<Vec<Product>, RepoError>;
+    /// Backoffice admin uniquement - tous statuts, tous marchands.
+    async fn list_all(&self) -> Result<Vec<ProductWithMerchant>, RepoError>;
+    /// Backoffice admin uniquement.
+    async fn delete(&self, id: Uuid) -> Result<(), RepoError>;
+    async fn count_active(&self) -> Result<i64, RepoError>;
     async fn update_status(
         &self,
         id: Uuid,

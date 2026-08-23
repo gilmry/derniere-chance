@@ -1,3 +1,4 @@
+mod admin;
 mod consumer;
 mod merchant;
 mod notification;
@@ -5,6 +6,7 @@ mod product;
 mod reservation;
 mod subscription;
 
+pub use admin::Admin;
 pub use consumer::Consumer;
 pub use merchant::Merchant;
 pub use notification::{Notification, NotificationStatus};
