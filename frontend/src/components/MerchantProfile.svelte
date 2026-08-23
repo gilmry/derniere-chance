@@ -74,13 +74,10 @@
   {:else if loadError || !merchant}
     <p class="state error">{loadError || "Commerçant introuvable."}</p>
   {:else}
-    <div class="cover">
-      <Photo shape="rect" label="Photo de couverture du commerce" />
-    </div>
     <div class="body">
       <div class="identity">
         <div class="avatar">
-          <Photo shape="rounded" radius={16} label="Logo" src={merchant.logo_url} />
+          <Photo shape="rounded" radius={14} label="Logo" src={merchant.logo_url} />
         </div>
         <div class="identity-text">
           <h1>{merchant.nom}</h1>
@@ -132,46 +129,47 @@
     color: #c0392b;
   }
 
-  .cover {
-    height: 140px;
-    flex-shrink: 0;
-  }
-
   .body {
-    padding: 0 20px 20px;
+    padding: 16px 20px 20px;
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 12px;
     flex: 1;
     overflow-y: auto;
+    min-height: 0;
   }
 
   .identity {
     display: flex;
     gap: 12px;
-    align-items: flex-end;
-    margin-top: -32px;
+    align-items: center;
   }
 
   .avatar {
-    width: 64px;
-    height: 64px;
-    border: 4px solid var(--color-bg);
-    border-radius: 16px;
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
     flex-shrink: 0;
   }
 
   .identity-text {
-    padding-bottom: 2px;
+    min-width: 0;
   }
 
   h1 {
-    font-size: 19px;
+    font-size: 18px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .subtitle {
     font-size: 12px;
     color: var(--color-muted);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   .follow {
