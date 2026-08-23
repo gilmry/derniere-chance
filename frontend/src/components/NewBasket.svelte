@@ -164,6 +164,7 @@
 </script>
 
 <div class="screen">
+  <a class="back-link" href="/pro/dashboard">← Tableau de bord</a>
   <div class="header">
     <h1>{editingId ? "Modifier le panier" : "Nouveau panier"}</h1>
     <span class="time">{time}</span>
@@ -257,6 +258,13 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+  }
+
+  .back-link {
+    font-size: 12px;
+    font-weight: 700;
+    color: #8a9188;
+    text-decoration: none;
   }
 
   h1 {

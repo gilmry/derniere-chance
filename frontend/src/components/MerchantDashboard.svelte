@@ -16,7 +16,12 @@
     type Product,
     type Merchant,
   } from "../lib/api";
-  import { getMerchantToken } from "../lib/auth";
+  import { getMerchantToken, clearMerchantToken } from "../lib/auth";
+
+  function logout() {
+    clearMerchantToken();
+    window.location.href = "/pro/login";
+  }
 
   let stats: MerchantDashboard | null = null;
   let products: Product[] = [];
@@ -181,20 +186,23 @@
 <div class="screen">
   <div class="header-row">
     <h1>Aujourd'hui</h1>
-    {#if !loading && !loadError}
-      <button class="logo-btn" on:click={() => logoFileInput.click()} type="button" aria-label="Changer le logo">
-        <Photo shape="circle" label="Logo" src={logoPreview ?? merchant?.logo_url} />
-        {#if uploadingLogo}<span class="logo-spinner">...</span>{/if}
-      </button>
-      <input
-        class="visually-hidden"
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        capture="environment"
-        bind:this={logoFileInput}
-        on:change={onLogoChange}
-      />
-    {/if}
+    <div class="header-actions">
+      <button class="logout-link" type="button" on:click={logout}>Déconnexion</button>
+      {#if !loading && !loadError}
+        <button class="logo-btn" on:click={() => logoFileInput.click()} type="button" aria-label="Changer le logo">
+          <Photo shape="circle" label="Logo" src={logoPreview ?? merchant?.logo_url} />
+          {#if uploadingLogo}<span class="logo-spinner">...</span>{/if}
+        </button>
+        <input
+          class="visually-hidden"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          capture="environment"
+          bind:this={logoFileInput}
+          on:change={onLogoChange}
+        />
+      {/if}
+    </div>
   </div>
   {#if logoError}<p class="pickup-result error">{logoError}</p>{/if}
   {#if loading}
@@ -308,6 +316,21 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logout-link {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--color-muted);
+    background: none;
+    border: none;
+    padding: 4px;
   }
 
   h1 {
