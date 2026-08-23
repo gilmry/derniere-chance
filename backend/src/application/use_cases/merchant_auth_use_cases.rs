@@ -9,7 +9,7 @@ use uuid::Uuid;
 use crate::application::dto::{
     AuthResponse, Claims, LoginRequest, MerchantResponseDto, RegisterMerchantRequest,
 };
-use crate::application::ports::{MerchantRepository, NewMerchant, RepoError};
+use crate::application::ports::{EventNotifier, MerchantRepository, NewMerchant, RepoError};
 use crate::domain::entities::Merchant;
 
 #[derive(Debug, Error)]
@@ -34,13 +34,19 @@ const ROLE: &str = "marchand";
 pub struct MerchantAuthUseCases {
     merchant_repo: Arc<dyn MerchantRepository>,
     jwt_secret: String,
+    event_notifier: Arc<dyn EventNotifier>,
 }
 
 impl MerchantAuthUseCases {
-    pub fn new(merchant_repo: Arc<dyn MerchantRepository>, jwt_secret: String) -> Self {
+    pub fn new(
+        merchant_repo: Arc<dyn MerchantRepository>,
+        jwt_secret: String,
+        event_notifier: Arc<dyn EventNotifier>,
+    ) -> Self {
         Self {
             merchant_repo,
             jwt_secret,
+            event_notifier,
         }
     }
 
@@ -72,6 +78,16 @@ impl MerchantAuthUseCases {
                 longitude: dto.longitude,
             })
             .await?;
+
+        self.event_notifier
+            .notify(
+                "nouveau_marchand",
+                format!(
+                    "Nouveau marchand inscrit : {} ({}, {})",
+                    merchant.nom, merchant.categorie, merchant.email
+                ),
+            )
+            .await;
 
         let token = self.mint_token(&merchant)?;
         Ok(AuthResponse { token })

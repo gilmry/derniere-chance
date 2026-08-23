@@ -3,7 +3,7 @@ use std::sync::Arc;
 use actix_cors::Cors;
 use actix_web::{web, App, HttpServer};
 
-use derniere_chance_api::application::ports::EmailSender;
+use derniere_chance_api::application::ports::{EmailSender, EventNotifier};
 use derniere_chance_api::application::use_cases::{
     AdminAuthUseCases, AdminUseCases, CatalogUseCases, ConsumerAuthUseCases, DashboardUseCases,
     MerchantAuthUseCases, ProductUseCases, ReservationUseCases, SubscriptionUseCases,
@@ -16,6 +16,7 @@ use derniere_chance_api::infrastructure::database::repositories::{
     PostgresSubscriptionRepository,
 };
 use derniere_chance_api::infrastructure::email::LoggingEmailSender;
+use derniere_chance_api::infrastructure::notifications::WebhookNotifier;
 use derniere_chance_api::infrastructure::storage::{PhotoStorage, PhotoStorageConfig};
 use derniere_chance_api::infrastructure::web::{configure_routes, AppState};
 
@@ -60,6 +61,10 @@ async fn main() -> std::io::Result<()> {
 
     let photo_storage = Arc::new(PhotoStorage::from_config(PhotoStorageConfig::from_env()).await);
 
+    // n8n webhook -> email for noteworthy events (nouveau marchand, nouvelle
+    // réservation, panier récupéré). No-op if WEBHOOK_NOTIFY_URL is unset.
+    let event_notifier: Arc<dyn EventNotifier> = Arc::new(WebhookNotifier::from_env());
+
     let admin_use_cases = Arc::new(AdminUseCases::new(
         merchant_repo.clone(),
         consumer_repo.clone(),
@@ -71,6 +76,7 @@ async fn main() -> std::io::Result<()> {
         merchant_auth_use_cases: Arc::new(MerchantAuthUseCases::new(
             merchant_repo.clone(),
             jwt_secret.clone(),
+            event_notifier.clone(),
         )),
         consumer_auth_use_cases: Arc::new(ConsumerAuthUseCases::new(
             consumer_repo.clone(),
@@ -96,6 +102,7 @@ async fn main() -> std::io::Result<()> {
         reservation_use_cases: Arc::new(ReservationUseCases::new(
             reservation_repo.clone(),
             product_repo,
+            event_notifier,
         )),
         dashboard_use_cases: Arc::new(DashboardUseCases::new(reservation_repo)),
         photo_storage,

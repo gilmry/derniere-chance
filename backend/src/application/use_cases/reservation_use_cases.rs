@@ -5,7 +5,8 @@ use uuid::Uuid;
 
 use crate::application::dto::{PickupValidationDto, ReservationConfirmationDto};
 use crate::application::ports::{
-    NewReservation, ProductRepository, RepoError, ReservationRepository, ReservationSummary,
+    EventNotifier, NewReservation, ProductRepository, RepoError, ReservationRepository,
+    ReservationSummary,
 };
 use crate::domain::entities::ReservationStatus;
 use crate::domain::services::reservation_code;
@@ -34,16 +35,19 @@ const MAX_CODE_ATTEMPTS: u8 = 5;
 pub struct ReservationUseCases {
     reservation_repo: Arc<dyn ReservationRepository>,
     product_repo: Arc<dyn ProductRepository>,
+    event_notifier: Arc<dyn EventNotifier>,
 }
 
 impl ReservationUseCases {
     pub fn new(
         reservation_repo: Arc<dyn ReservationRepository>,
         product_repo: Arc<dyn ProductRepository>,
+        event_notifier: Arc<dyn EventNotifier>,
     ) -> Self {
         Self {
             reservation_repo,
             product_repo,
+            event_notifier,
         }
     }
 
@@ -80,7 +84,19 @@ impl ReservationUseCases {
                         .find_with_merchant(produit_id)
                         .await?
                         .ok_or(ReservationError::ProductNotFound)?;
-                    return Ok(ReservationConfirmationDto::new(reservation, offer));
+                    let confirmation = ReservationConfirmationDto::new(reservation, offer);
+                    self.event_notifier
+                        .notify(
+                            "nouvelle_reservation",
+                            format!(
+                                "Nouvelle réservation : \"{}\" chez {} (code {})",
+                                confirmation.produit_nom,
+                                confirmation.marchand_nom,
+                                confirmation.code
+                            ),
+                        )
+                        .await;
+                    return Ok(confirmation);
                 }
                 Err(RepoError::Conflict(_)) => continue,
                 Err(other) => {
@@ -118,6 +134,15 @@ impl ReservationUseCases {
         }
 
         self.reservation_repo.mark_recuperee(reservation.id).await?;
+        self.event_notifier
+            .notify(
+                "panier_recupere",
+                format!(
+                    "Panier récupéré : \"{}\" (code {})",
+                    product.nom, reservation.code
+                ),
+            )
+            .await;
         Ok(PickupValidationDto {
             code: reservation.code,
             produit_nom: product.nom,

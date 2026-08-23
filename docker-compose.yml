@@ -131,6 +131,7 @@ services:
       # deux variables, personne ne peut se connecter au backoffice.
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      WEBHOOK_NOTIFY_URL: ${WEBHOOK_NOTIFY_URL:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -168,6 +169,7 @@ services:
       S3_PUBLIC_URL: http://localhost:9000/${S3_BUCKET:-photos}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      WEBHOOK_NOTIFY_URL: ${WEBHOOK_NOTIFY_URL:-}
     ports:
       - "8080:8080"
     volumes:
