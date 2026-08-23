@@ -70,6 +70,18 @@
     try {
       L = await import("leaflet");
 
+      // Les icônes par défaut de Leaflet référencent des chemins relatifs au
+      // package qui cassent une fois bundlés (problème connu) - on les
+      // ré-associe explicitement aux assets importés par Vite. AVANT toute
+      // création de marqueur : Leaflet fige les options d'icône au moment où
+      // le marqueur est construit, un fix arrivé après (ex. déclenché par
+      // markersLayer devenant truthy plus bas) ne rattrape pas les marqueurs
+      // déjà créés avec l'icône par défaut cassée.
+      const iconRetinaUrl = (await import("leaflet/dist/images/marker-icon-2x.png")).default;
+      const iconUrl = (await import("leaflet/dist/images/marker-icon.png")).default;
+      const shadowUrl = (await import("leaflet/dist/images/marker-shadow.png")).default;
+      L.Icon.Default.mergeOptions({ iconRetinaUrl, iconUrl, shadowUrl });
+
       map = L.map(container).setView(
         coords ? [coords.lat, coords.lon] : FALLBACK_CENTER,
         14,
@@ -91,16 +103,6 @@
       // pas encore stabilisé).
       resizeObserver = new ResizeObserver(() => map?.invalidateSize());
       resizeObserver.observe(container);
-
-      // Les icônes par défaut de Leaflet référencent des chemins relatifs au
-      // package qui cassent une fois bundlés (problème connu) - on les
-      // ré-associe explicitement aux assets importés par Vite. Fait après
-      // la création de la carte : un échec ici ne doit pas empêcher les
-      // tuiles de s'afficher.
-      const iconRetinaUrl = (await import("leaflet/dist/images/marker-icon-2x.png")).default;
-      const iconUrl = (await import("leaflet/dist/images/marker-icon.png")).default;
-      const shadowUrl = (await import("leaflet/dist/images/marker-shadow.png")).default;
-      L.Icon.Default.mergeOptions({ iconRetinaUrl, iconUrl, shadowUrl });
     } catch (err) {
       console.error("OffersMap init failed", err);
       mapError = "La carte n'a pas pu se charger.";
@@ -127,10 +129,14 @@
 <div bind:this={container} class="leaflet-container-wrap"></div>
 
 <style>
+  /* position:absolute + inset:0 plutôt que width/height:100% : le parent
+     (.map dans Feed.svelte) est déjà position:relative, donc ceci fixe des
+     dimensions en pixels dès le premier layout, sans dépendre de la
+     résolution de pourcentages sur un ancêtre flex (source du bug observé :
+     la carte ne couvrait qu'une partie de son conteneur). */
   .leaflet-container-wrap {
-    width: 100%;
-    height: 100%;
-    min-height: 320px;
+    position: absolute;
+    inset: 0;
   }
 
   .map-error {
