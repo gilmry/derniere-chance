@@ -76,6 +76,7 @@ export interface Offer {
   retrait_debut: string;
   retrait_fin: string;
   statut: ProductStatus;
+  photo_url: string | null;
 }
 
 export interface Merchant {
@@ -101,6 +102,7 @@ export interface Product {
   retrait_debut: string;
   retrait_fin: string;
   statut: ProductStatus;
+  photo_url: string | null;
 }
 
 export interface MerchantProfile extends Merchant {
@@ -221,10 +223,35 @@ export function publishProduct(
     quantite: number;
     retrait_debut: string;
     retrait_fin: string;
+    photo_url?: string | null;
   },
   token: string,
 ): Promise<Product> {
   return apiFetch("/marchands/moi/produits", { method: "POST", body: dto, token });
+}
+
+/// Upload une photo de panier, renvoie son URL publique à passer ensuite à
+/// publishProduct(). Pas de JSON ici (multipart), donc pas apiFetch().
+export async function uploadProductPhoto(file: File, token: string): Promise<string> {
+  const form = new FormData();
+  form.append("photo", file);
+
+  const res = await fetch(`${API_URL}/marchands/moi/produits/photo`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  });
+
+  const data = await res.json().catch(() => undefined);
+
+  if (!res.ok) {
+    const message = (data && typeof data === "object" && "error" in data)
+      ? String((data as { error: unknown }).error)
+      : `Erreur ${res.status}`;
+    throw new ApiError(res.status, message);
+  }
+
+  return (data as { photo_url: string }).photo_url;
 }
 
 export function markEcoule(productId: string, token: string): Promise<Product> {

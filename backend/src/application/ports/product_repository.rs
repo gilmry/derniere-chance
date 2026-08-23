@@ -16,6 +16,7 @@ pub struct NewProduct {
     pub quantite: i32,
     pub retrait_debut: DateTime<Utc>,
     pub retrait_fin: DateTime<Utc>,
+    pub photo_url: Option<String>,
 }
 
 /// A produit flattened with its marchand's public info - the shape the
@@ -38,6 +39,7 @@ pub struct ProductWithMerchant {
     pub retrait_debut: DateTime<Utc>,
     pub retrait_fin: DateTime<Utc>,
     pub statut: ProductStatus,
+    pub photo_url: Option<String>,
 }
 
 #[async_trait]

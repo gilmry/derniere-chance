@@ -10,7 +10,7 @@ actix-web = "4.11"
 actix-cors = "0.7"
 
 # Async runtime
-tokio = { version = "1.52", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.52", features = ["macros", "rt-multi-thread", "fs"] }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -37,6 +37,12 @@ uuid = { version = "1.23", features = ["serde", "v4"] }
 chrono = { version = "0.4", features = ["serde"] }
 async-trait = "0.1"
 thiserror = "2.0"
+
+# Photo storage (S3/MinIO)
+actix-multipart = "0.8"
+aws-config = { version = "1", features = ["behavior-version-latest"] }
+aws-sdk-s3 = { version = "1", features = ["behavior-version-latest"] }
+aws-credential-types = "1"
 
 [dev-dependencies]
 rust_decimal_macros = "1.40"

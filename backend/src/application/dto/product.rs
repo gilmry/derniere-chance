@@ -15,6 +15,9 @@ pub struct CreateProductDto {
     pub quantite: i32,
     pub retrait_debut: DateTime<Utc>,
     pub retrait_fin: DateTime<Utc>,
+    /// URL publique renvoyée par POST /marchands/moi/produits/photo -
+    /// facultative, un panier reste publiable sans photo.
+    pub photo_url: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -30,6 +33,7 @@ pub struct ProductResponseDto {
     pub retrait_debut: DateTime<Utc>,
     pub retrait_fin: DateTime<Utc>,
     pub statut: ProductStatus,
+    pub photo_url: Option<String>,
 }
 
 impl From<Product> for ProductResponseDto {
@@ -46,6 +50,7 @@ impl From<Product> for ProductResponseDto {
             retrait_debut: product.retrait_debut,
             retrait_fin: product.retrait_fin,
             statut: product.statut,
+            photo_url: product.photo_url,
         }
     }
 }

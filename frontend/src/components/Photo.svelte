@@ -2,16 +2,26 @@
   export let shape: "rect" | "rounded" | "circle" = "rounded";
   export let radius = 16;
   export let label = "";
+  export let src: string | null = null;
 </script>
 
-<div
-  class="photo photo--{shape}"
-  style={shape === "rounded" ? `border-radius:${radius}px` : ""}
-  role="img"
-  aria-label={label}
->
-  {#if label}<span>{label}</span>{/if}
-</div>
+{#if src}
+  <img
+    {src}
+    alt={label}
+    class="photo photo--{shape}"
+    style={shape === "rounded" ? `border-radius:${radius}px` : ""}
+  />
+{:else}
+  <div
+    class="photo photo--{shape}"
+    style={shape === "rounded" ? `border-radius:${radius}px` : ""}
+    role="img"
+    aria-label={label}
+  >
+    {#if label}<span>{label}</span>{/if}
+  </div>
+{/if}
 
 <style>
   .photo {
@@ -27,6 +37,11 @@
     text-align: center;
     padding: 0.5rem;
     overflow: hidden;
+  }
+
+  img.photo {
+    object-fit: cover;
+    padding: 0;
   }
 
   .photo--rect {

@@ -42,6 +42,73 @@ services:
       # Internal only - postgres has no business on the shared Traefik network.
       - derniere-chance-network
 
+  # --- Photo storage (S3-compatible). Reads are served directly by Traefik
+  # (see labels below), never proxied through the backend - the box only has
+  # one vCPU shared with Elevia, and a busy feed can mean dozens of image
+  # requests per pageview. Only uploads (rare, small, auth-gated) go through
+  # the backend, which writes here. ---
+  minio:
+    image: minio/minio:latest
+    container_name: derniere-chance-minio
+    restart: unless-stopped
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
+    # Loopback only - local dev access (mc, console) or an SSH tunnel in prod.
+    # Public read access goes through Traefik (labels below), not this port.
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://127.0.0.1:9000/minio/health/live || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - derniere-chance-network
+      - ecosolva-web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=ecosolva-web"
+      - "traefik.http.routers.derniere-chance-photos.rule=Host(`${API_DOMAIN:-api.derniere-chance.ecosolva.org}`) && PathPrefix(`/photos`)"
+      - "traefik.http.routers.derniere-chance-photos.entrypoints=websecure"
+      - "traefik.http.routers.derniere-chance-photos.tls.certresolver=letsencrypt"
+      - "traefik.http.services.derniere-chance-photos.loadbalancer.server.port=9000"
+
+  # One-shot: creates the `photos` bucket and makes it public-read, then exits.
+  minio-bootstrap:
+    image: minio/mc:latest
+    container_name: derniere-chance-minio-bootstrap
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      S3_BUCKET: ${S3_BUCKET:-photos}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
+    entrypoint: ["/bin/sh", "-c"]
+    # command as a one-item list (not a plain string): a plain string here
+    # gets shlex-split by compose and appended as *extra* args after
+    # entrypoint's "-c", so only the first word ever reaches the shell as
+    # its script (silently runs bare "set", dumping env vars - everything
+    # else becomes ignored positional params). A one-item list is passed
+    # through as that single `-c` argument, untouched.
+    command:
+      - >
+        set -e;
+        until mc alias set local http://minio:9000 "$${S3_ACCESS_KEY}" "$${S3_SECRET_KEY}"; do
+          echo "Waiting for MinIO...";
+          sleep 2;
+        done;
+        mc mb --ignore-existing "local/$${S3_BUCKET}";
+        mc anonymous set download "local/$${S3_BUCKET}";
+        echo "MinIO bucket $${S3_BUCKET} ready (public read).";
+    networks:
+      - derniere-chance-network
+
   # --- Backend: production image pulled from GHCR (prod profile only), fronted by the shared Traefik ---
   backend:
     image: ${BACKEND_IMAGE:-ghcr.io/gilmry/derniere-chance/backend:latest}
@@ -54,8 +121,15 @@ services:
       SERVER_HOST: 0.0.0.0
       SERVER_PORT: 8080
       RUST_LOG: ${RUST_LOG:-info}
+      S3_BUCKET: ${S3_BUCKET:-photos}
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
+      S3_PUBLIC_URL: https://${API_DOMAIN:-api.derniere-chance.ecosolva.org}/photos
     depends_on:
       postgres:
+        condition: service_healthy
+      minio:
         condition: service_healthy
     networks:
       - derniere-chance-network
@@ -82,6 +156,11 @@ services:
       SERVER_PORT: 8080
       RUST_LOG: debug
       RUST_BACKTRACE: "1"
+      S3_BUCKET: ${S3_BUCKET:-photos}
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
+      S3_PUBLIC_URL: http://localhost:9000/${S3_BUCKET:-photos}
     ports:
       - "8080:8080"
     volumes:
@@ -90,6 +169,8 @@ services:
       - target_cache:/app/target
     depends_on:
       postgres:
+        condition: service_healthy
+      minio:
         condition: service_healthy
     networks:
       - derniere-chance-network
@@ -141,5 +222,6 @@ networks:
 
 volumes:
   postgres_data:
+  minio_data:
   cargo_cache:
   target_cache:

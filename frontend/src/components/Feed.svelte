@@ -77,7 +77,7 @@
       {#if featured}
         <a class="map-card" href={`/offre?id=${featured.id}`}>
           <div class="map-card-photo">
-            <Photo shape="rounded" radius={12} label="Photo" />
+            <Photo shape="rounded" radius={12} label="Photo" src={featured.photo_url} />
           </div>
           <div class="map-card-info">
             <div class="map-card-name">{featured.marchand_nom}</div>
@@ -95,7 +95,7 @@
       {#each offers as offer}
         <a class="card offer-row" href={`/offre?id=${offer.id}`}>
           <div class="offer-photo">
-            <Photo shape="rounded" radius={14} label="Photo panier" />
+            <Photo shape="rounded" radius={14} label="Photo panier" src={offer.photo_url} />
           </div>
           <div class="offer-info">
             <div class="offer-name">{offer.marchand_nom}</div>

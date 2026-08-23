@@ -14,6 +14,7 @@ use derniere_chance_api::infrastructure::database::repositories::{
     PostgresProductRepository, PostgresReservationRepository, PostgresSubscriptionRepository,
 };
 use derniere_chance_api::infrastructure::email::LoggingEmailSender;
+use derniere_chance_api::infrastructure::storage::{PhotoStorage, PhotoStorageConfig};
 use derniere_chance_api::infrastructure::web::{configure_routes, AppState};
 
 #[actix_web::main]
@@ -52,6 +53,8 @@ async fn main() -> std::io::Result<()> {
     // `EmailSender` when that's decided.
     let email_sender: Arc<dyn EmailSender> = Arc::new(LoggingEmailSender);
 
+    let photo_storage = Arc::new(PhotoStorage::from_config(PhotoStorageConfig::from_env()).await);
+
     let state = web::Data::new(AppState {
         merchant_auth_use_cases: Arc::new(MerchantAuthUseCases::new(
             merchant_repo.clone(),
@@ -81,6 +84,7 @@ async fn main() -> std::io::Result<()> {
             product_repo,
         )),
         dashboard_use_cases: Arc::new(DashboardUseCases::new(reservation_repo)),
+        photo_storage,
     });
 
     tracing::info!("derniere-chance-api listening on {host}:{port}");

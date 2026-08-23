@@ -27,6 +27,10 @@ pub fn configure_routes(cfg: &mut web::ServiceConfig) {
             web::post().to(handlers::publish),
         )
         .route(
+            "/marchands/moi/produits/photo",
+            web::post().to(handlers::upload_photo),
+        )
+        .route(
             "/marchands/moi/produits",
             web::get().to(handlers::list_mine),
         )

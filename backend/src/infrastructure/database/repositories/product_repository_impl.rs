@@ -7,13 +7,14 @@ use crate::infrastructure::database::DbPool;
 
 const PRODUCT_COLUMNS: &str =
     "id, marchand_id, nom, description, prix_initial, prix_demarque, quantite, \
-     retrait_debut, retrait_fin, statut, created_at";
+     retrait_debut, retrait_fin, statut, photo_url, created_at";
 
 const OFFER_SELECT: &str = "SELECT p.id, p.marchand_id, m.nom AS marchand_nom, \
      m.categorie AS marchand_categorie, m.note AS marchand_note, \
      m.latitude AS marchand_latitude, m.longitude AS marchand_longitude, \
      p.nom, p.description, \
-     p.prix_initial, p.prix_demarque, p.quantite, p.retrait_debut, p.retrait_fin, p.statut \
+     p.prix_initial, p.prix_demarque, p.quantite, p.retrait_debut, p.retrait_fin, p.statut, \
+     p.photo_url \
      FROM produits p JOIN marchands m ON m.id = p.marchand_id";
 
 pub struct PostgresProductRepository {
@@ -31,8 +32,8 @@ impl ProductRepository for PostgresProductRepository {
     async fn create(&self, new: NewProduct) -> Result<Product, RepoError> {
         let query = format!(
             "INSERT INTO produits (marchand_id, nom, description, prix_initial, prix_demarque, \
-             quantite, retrait_debut, retrait_fin)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             quantite, retrait_debut, retrait_fin, photo_url)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
              RETURNING {PRODUCT_COLUMNS}"
         );
         sqlx::query_as::<_, Product>(&query)
@@ -44,6 +45,7 @@ impl ProductRepository for PostgresProductRepository {
             .bind(new.quantite)
             .bind(new.retrait_debut)
             .bind(new.retrait_fin)
+            .bind(new.photo_url)
             .fetch_one(&self.pool)
             .await
             .map_err(Into::into)

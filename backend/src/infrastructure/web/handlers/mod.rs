@@ -2,6 +2,7 @@ mod catalog_handlers;
 mod consumer_auth_handlers;
 mod dashboard_handlers;
 mod merchant_auth_handlers;
+mod photo_handlers;
 mod product_handlers;
 mod reservation_handlers;
 mod responses;
@@ -11,6 +12,7 @@ use actix_web::HttpResponse;
 
 pub use catalog_handlers::{get_merchant, get_offer, list_offers};
 pub use dashboard_handlers::{consumer_profile, merchant_today};
+pub use photo_handlers::upload_photo;
 pub use product_handlers::{list_mine, mark_ecoule, publish};
 pub use reservation_handlers::{reserve, validate_pickup};
 pub use subscription_handlers::{follow, list_followed, unfollow};

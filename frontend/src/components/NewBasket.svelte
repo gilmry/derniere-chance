@@ -1,11 +1,14 @@
 <script lang="ts">
-  import { publishProduct, ApiError } from "../lib/api";
+  import { publishProduct, uploadProductPhoto, ApiError } from "../lib/api";
   import { getMerchantToken } from "../lib/auth";
 
-  // Pas de support photo côté backend (CreateProductDto n'a pas de champ
-  // image) - l'input reste pour l'aperçu visuel du marchand mais n'est pas
-  // envoyé à l'API.
-  let photoUrl: string | null = null;
+  // Aperçu local instantané (blob) pendant l'upload ; remplacé par
+  // uploadedPhotoUrl (URL publique MinIO) une fois l'upload terminé, envoyé
+  // avec la publication.
+  let photoPreview: string | null = null;
+  let uploadedPhotoUrl: string | null = null;
+  let uploadingPhoto = false;
+  let photoError = "";
   let fileInput: HTMLInputElement;
 
   let nom = "";
@@ -18,10 +21,27 @@
   let error = "";
   let loading = false;
 
-  function onPhotoChange(event: Event) {
+  async function onPhotoChange(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0];
-    if (file) {
-      photoUrl = URL.createObjectURL(file);
+    if (!file) return;
+
+    photoPreview = URL.createObjectURL(file);
+    uploadedPhotoUrl = null;
+    photoError = "";
+    uploadingPhoto = true;
+
+    const token = getMerchantToken();
+    if (!token) {
+      window.location.href = "/pro/login";
+      return;
+    }
+
+    try {
+      uploadedPhotoUrl = await uploadProductPhoto(file, token);
+    } catch (err) {
+      photoError = err instanceof ApiError ? err.message : "L'envoi de la photo a échoué.";
+    } finally {
+      uploadingPhoto = false;
     }
   }
 
@@ -67,6 +87,7 @@
           quantite: quantity,
           retrait_debut: debut,
           retrait_fin: fin,
+          photo_url: uploadedPhotoUrl,
         },
         token,
       );
@@ -90,16 +111,18 @@
 
   <form on:submit={publish} class="form">
     <button class="photo" on:click={() => fileInput.click()} type="button">
-      {#if photoUrl}
-        <img src={photoUrl} alt="Photo du produit" />
+      {#if photoPreview}
+        <img src={photoPreview} alt="Photo du produit" />
+        {#if uploadingPhoto}<span class="photo-status">Envoi...</span>{/if}
       {:else}
         <span>Prendre une photo du produit</span>
       {/if}
     </button>
+    {#if photoError}<p class="error">{photoError}</p>{/if}
     <input
       class="visually-hidden"
       type="file"
-      accept="image/*"
+      accept="image/jpeg,image/png,image/webp"
       bind:this={fileInput}
       on:change={onPhotoChange}
     />
@@ -142,8 +165,8 @@
     {#if error}<p class="error">{error}</p>{/if}
 
     <div class="spacer"></div>
-    <button class="btn btn-primary publish" type="submit" disabled={loading}>
-      {loading ? "..." : "Publier maintenant"}
+    <button class="btn btn-primary publish" type="submit" disabled={loading || uploadingPhoto}>
+      {loading ? "..." : uploadingPhoto ? "Envoi de la photo..." : "Publier maintenant"}
     </button>
   </form>
 </div>
@@ -184,6 +207,7 @@
   }
 
   .photo {
+    position: relative;
     width: 100%;
     height: 190px;
     border-radius: 20px;
@@ -204,6 +228,18 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+  }
+
+  .photo-status {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 8px;
   }
 
   .visually-hidden {

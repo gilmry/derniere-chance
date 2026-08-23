@@ -27,5 +27,6 @@ pub struct Product {
     pub retrait_debut: DateTime<Utc>,
     pub retrait_fin: DateTime<Utc>,
     pub statut: ProductStatus,
+    pub photo_url: Option<String>,
     pub created_at: DateTime<Utc>,
 }

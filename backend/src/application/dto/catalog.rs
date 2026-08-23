@@ -33,6 +33,7 @@ pub struct OfferDto {
     pub retrait_debut: DateTime<Utc>,
     pub retrait_fin: DateTime<Utc>,
     pub statut: ProductStatus,
+    pub photo_url: Option<String>,
 }
 
 impl From<ProductWithMerchant> for OfferDto {
@@ -55,6 +56,7 @@ impl From<ProductWithMerchant> for OfferDto {
             retrait_debut: p.retrait_debut,
             retrait_fin: p.retrait_fin,
             statut: p.statut,
+            photo_url: p.photo_url,
         }
     }
 }

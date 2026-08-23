@@ -88,6 +88,7 @@ impl ProductUseCases {
                 quantite: dto.quantite,
                 retrait_debut: dto.retrait_debut,
                 retrait_fin: dto.retrait_fin,
+                photo_url: dto.photo_url,
             })
             .await?;
 

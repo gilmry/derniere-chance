@@ -67,7 +67,7 @@
     <p class="state error">{loadError || "Offre introuvable."}</p>
   {:else}
     <div class="photo-wrap">
-      <Photo shape="rect" label="Photo du panier surprise" />
+      <Photo shape="rect" label="Photo du panier surprise" src={offer.photo_url} />
       <span class="badge-discount overlay-badge">-{offer.reduction_pct}%</span>
     </div>
     <div class="body">

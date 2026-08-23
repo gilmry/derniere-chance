@@ -96,7 +96,7 @@
         {#each merchant.offres.filter((o) => o.statut === "publie") as offer}
           <a class="card offer-row" href={`/offre?id=${offer.id}`}>
             <div class="offer-photo">
-              <Photo shape="rounded" radius={10} label="Photo" />
+              <Photo shape="rounded" radius={10} label="Photo" src={offer.photo_url} />
             </div>
             <div class="offer-info">
               <div class="offer-name">{offer.nom}</div>

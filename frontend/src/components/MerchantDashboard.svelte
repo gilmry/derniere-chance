@@ -73,7 +73,7 @@
       {#each products as product}
         <div class="card row">
           <div class="row-photo">
-            <Photo shape="rounded" radius={10} label="Photo" />
+            <Photo shape="rounded" radius={10} label="Photo" src={product.photo_url} />
           </div>
           <div class="row-info">
             <div class="row-name">{product.nom}</div>

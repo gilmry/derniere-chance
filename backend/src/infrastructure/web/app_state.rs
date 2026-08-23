@@ -4,6 +4,7 @@ use crate::application::use_cases::{
     CatalogUseCases, ConsumerAuthUseCases, DashboardUseCases, MerchantAuthUseCases,
     ProductUseCases, ReservationUseCases, SubscriptionUseCases,
 };
+use crate::infrastructure::storage::PhotoStorage;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -14,4 +15,5 @@ pub struct AppState {
     pub subscription_use_cases: Arc<SubscriptionUseCases>,
     pub reservation_use_cases: Arc<ReservationUseCases>,
     pub dashboard_use_cases: Arc<DashboardUseCases>,
+    pub photo_storage: Arc<PhotoStorage>,
 }
