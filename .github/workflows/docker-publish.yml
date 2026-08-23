@@ -95,3 +95,10 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             PUBLIC_API_URL=https://api.derniere-chance.ecosolva.org
+            PUBLIC_DOMAIN=derniere-chance.ecosolva.org
+            PUBLIC_LEGAL_EDITOR_NAME=Gilles Maury
+            PUBLIC_LEGAL_EDITOR_STATUS=indépendant (architecte solutions & développeur freelance)
+            PUBLIC_LEGAL_EDITOR_CITY=Bruxelles, Belgique
+            PUBLIC_LEGAL_BUSINESS_NUMBER=BE0670.778.061
+            PUBLIC_LEGAL_CONTACT_EMAIL=gilmry@gmail.com
+            PUBLIC_GITHUB_REPO=gilmry/derniere-chance

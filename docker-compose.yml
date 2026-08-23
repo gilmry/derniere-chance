@@ -209,6 +209,13 @@ services:
     profiles: ["dev"]
     environment:
       PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:8080}
+      PUBLIC_DOMAIN: ${DOMAIN:-derniere-chance.ecosolva.org}
+      PUBLIC_LEGAL_EDITOR_NAME: ${PUBLIC_LEGAL_EDITOR_NAME:-Gilles Maury}
+      PUBLIC_LEGAL_EDITOR_STATUS: ${PUBLIC_LEGAL_EDITOR_STATUS:-indépendant (architecte solutions & développeur freelance)}
+      PUBLIC_LEGAL_EDITOR_CITY: ${PUBLIC_LEGAL_EDITOR_CITY:-Bruxelles, Belgique}
+      PUBLIC_LEGAL_BUSINESS_NUMBER: ${PUBLIC_LEGAL_BUSINESS_NUMBER:-BE0670.778.061}
+      PUBLIC_LEGAL_CONTACT_EMAIL: ${PUBLIC_LEGAL_CONTACT_EMAIL:-gilmry@gmail.com}
+      PUBLIC_GITHUB_REPO: ${PUBLIC_GITHUB_REPO:-gilmry/derniere-chance}
     ports:
       - "${FRONTEND_PORT:-4322}:4321"
     volumes:
