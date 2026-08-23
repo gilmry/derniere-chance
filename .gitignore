@@ -11,6 +11,11 @@
 # Local docker-compose env (root)
 /.env
 
+# E2E (Playwright)
+/e2e/node_modules
+/e2e/test-results
+/e2e/playwright-report
+
 # Editors / OS
 .DS_Store
 *.swp
