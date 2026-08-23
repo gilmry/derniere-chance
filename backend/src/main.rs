@@ -5,13 +5,15 @@ use actix_web::{web, App, HttpServer};
 
 use derniere_chance_api::application::ports::EmailSender;
 use derniere_chance_api::application::use_cases::{
-    CatalogUseCases, ConsumerAuthUseCases, DashboardUseCases, MerchantAuthUseCases,
-    ProductUseCases, ReservationUseCases, SubscriptionUseCases,
+    AdminAuthUseCases, AdminUseCases, CatalogUseCases, ConsumerAuthUseCases, DashboardUseCases,
+    MerchantAuthUseCases, ProductUseCases, ReservationUseCases, SubscriptionUseCases,
 };
+use derniere_chance_api::infrastructure::bootstrap::bootstrap_admin;
 use derniere_chance_api::infrastructure::database::create_pool;
 use derniere_chance_api::infrastructure::database::repositories::{
-    PostgresConsumerRepository, PostgresMerchantRepository, PostgresNotificationRepository,
-    PostgresProductRepository, PostgresReservationRepository, PostgresSubscriptionRepository,
+    PostgresAdminRepository, PostgresConsumerRepository, PostgresMerchantRepository,
+    PostgresNotificationRepository, PostgresProductRepository, PostgresReservationRepository,
+    PostgresSubscriptionRepository,
 };
 use derniere_chance_api::infrastructure::email::LoggingEmailSender;
 use derniere_chance_api::infrastructure::storage::{PhotoStorage, PhotoStorageConfig};
@@ -41,12 +43,15 @@ async fn main() -> std::io::Result<()> {
         .await
         .expect("failed to run database migrations");
 
+    bootstrap_admin(&db).await;
+
     let merchant_repo = Arc::new(PostgresMerchantRepository::new(db.clone()));
     let consumer_repo = Arc::new(PostgresConsumerRepository::new(db.clone()));
     let product_repo = Arc::new(PostgresProductRepository::new(db.clone()));
     let subscription_repo = Arc::new(PostgresSubscriptionRepository::new(db.clone()));
     let reservation_repo = Arc::new(PostgresReservationRepository::new(db.clone()));
     let notification_repo = Arc::new(PostgresNotificationRepository::new(db.clone()));
+    let admin_repo = Arc::new(PostgresAdminRepository::new(db.clone()));
 
     // No transactional-email provider is wired up yet (see VISION.md §8) -
     // this adapter only logs. Swap it for a Resend/SMTP implementation of
@@ -55,6 +60,13 @@ async fn main() -> std::io::Result<()> {
 
     let photo_storage = Arc::new(PhotoStorage::from_config(PhotoStorageConfig::from_env()).await);
 
+    let admin_use_cases = Arc::new(AdminUseCases::new(
+        merchant_repo.clone(),
+        consumer_repo.clone(),
+        product_repo.clone(),
+        reservation_repo.clone(),
+    ));
+
     let state = web::Data::new(AppState {
         merchant_auth_use_cases: Arc::new(MerchantAuthUseCases::new(
             merchant_repo.clone(),
@@ -62,8 +74,10 @@ async fn main() -> std::io::Result<()> {
         )),
         consumer_auth_use_cases: Arc::new(ConsumerAuthUseCases::new(
             consumer_repo.clone(),
-            jwt_secret,
+            jwt_secret.clone(),
         )),
+        admin_auth_use_cases: Arc::new(AdminAuthUseCases::new(admin_repo, jwt_secret)),
+        admin_use_cases,
         catalog_use_cases: Arc::new(CatalogUseCases::new(
             product_repo.clone(),
             merchant_repo.clone(),

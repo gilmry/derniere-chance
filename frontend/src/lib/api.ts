@@ -266,6 +266,73 @@ export function validatePickup(code: string, token: string): Promise<void> {
   return apiFetch(`/marchands/moi/reservations/${code}/valider`, { method: "POST", token });
 }
 
+// --- Backoffice admin (auth: admin) ---
+
+export interface AdminMerchant {
+  id: string;
+  nom: string;
+  adresse: string;
+  categorie: string;
+  note: string | null;
+  email: string;
+  latitude: number | null;
+  longitude: number | null;
+  created_at: string;
+}
+
+export interface AdminConsumer {
+  id: string;
+  email: string;
+  created_at: string;
+}
+
+export interface AdminProduct extends Offer {
+  created_at?: string;
+}
+
+export interface AdminStats {
+  marchands: number;
+  consommateurs: number;
+  produits_actifs: number;
+  reservations: number;
+}
+
+export function adminLogin(email: string, password: string): Promise<AuthResponse> {
+  return apiFetch("/admin/connexion", { method: "POST", body: { email, password } });
+}
+
+export function adminListMerchants(token: string): Promise<AdminMerchant[]> {
+  return apiFetch("/admin/marchands", { token });
+}
+
+export function adminDeleteMerchant(id: string, token: string): Promise<void> {
+  return apiFetch(`/admin/marchands/${id}`, { method: "DELETE", token });
+}
+
+export function adminListConsumers(token: string): Promise<AdminConsumer[]> {
+  return apiFetch("/admin/consommateurs", { token });
+}
+
+export function adminDeleteConsumer(id: string, token: string): Promise<void> {
+  return apiFetch(`/admin/consommateurs/${id}`, { method: "DELETE", token });
+}
+
+export function adminListProducts(token: string): Promise<AdminProduct[]> {
+  return apiFetch("/admin/produits", { token });
+}
+
+export function adminDeleteProduct(id: string, token: string): Promise<void> {
+  return apiFetch(`/admin/produits/${id}`, { method: "DELETE", token });
+}
+
+export function adminUnpublishProduct(id: string, token: string): Promise<void> {
+  return apiFetch(`/admin/produits/${id}/depublier`, { method: "PATCH", token });
+}
+
+export function adminStats(token: string): Promise<AdminStats> {
+  return apiFetch("/admin/stats", { token });
+}
+
 // --- Formatage (rust_decimal arrive en string) ---
 
 export function formatPrice(value: string | number): string {

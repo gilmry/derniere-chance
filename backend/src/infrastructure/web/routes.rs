@@ -71,5 +71,27 @@ pub fn configure_routes(cfg: &mut web::ServiceConfig) {
         .route(
             "/marchands/{id}/abonnement",
             web::delete().to(handlers::unfollow),
-        );
+        )
+        // Backoffice admin (auth: admin)
+        .route("/admin/connexion", web::post().to(handlers::admin_auth::login))
+        .route("/admin/marchands", web::get().to(handlers::list_merchants))
+        .route(
+            "/admin/marchands/{id}",
+            web::delete().to(handlers::delete_merchant),
+        )
+        .route("/admin/consommateurs", web::get().to(handlers::list_consumers))
+        .route(
+            "/admin/consommateurs/{id}",
+            web::delete().to(handlers::delete_consumer),
+        )
+        .route("/admin/produits", web::get().to(handlers::list_products))
+        .route(
+            "/admin/produits/{id}",
+            web::delete().to(handlers::delete_product),
+        )
+        .route(
+            "/admin/produits/{id}/depublier",
+            web::patch().to(handlers::unpublish_product),
+        )
+        .route("/admin/stats", web::get().to(handlers::admin_stats));
 }

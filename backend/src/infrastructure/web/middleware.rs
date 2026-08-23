@@ -81,3 +81,34 @@ impl FromRequest for AuthenticatedConsumer {
         }
     }
 }
+
+/// Admin identity extracted and verified from the JWT `Authorization: Bearer`
+/// header. Backoffice léger, un seul compte - voir application::use_cases::AdminUseCases.
+#[derive(Debug, Clone)]
+pub struct AuthenticatedAdmin {
+    pub admin_id: Uuid,
+}
+
+impl FromRequest for AuthenticatedAdmin {
+    type Error = Error;
+    type Future = Ready<Result<Self, Self::Error>>;
+
+    fn from_request(req: &HttpRequest, _payload: &mut Payload) -> Self::Future {
+        let app_state = match req.app_data::<web::Data<AppState>>() {
+            Some(state) => state,
+            None => return ready(Err(ErrorUnauthorized("internal server error"))),
+        };
+
+        let token = match bearer_token(req) {
+            Ok(t) => t,
+            Err(err) => return ready(Err(err)),
+        };
+
+        match app_state.admin_auth_use_cases.verify_token(token) {
+            Ok(claims) => ready(Ok(AuthenticatedAdmin {
+                admin_id: claims.sub,
+            })),
+            Err(_) => ready(Err(ErrorUnauthorized("invalid or expired token"))),
+        }
+    }
+}

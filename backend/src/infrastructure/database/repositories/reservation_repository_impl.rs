@@ -93,4 +93,11 @@ impl ReservationRepository for PostgresReservationRepository {
             montant_economise,
         })
     }
+
+    async fn count(&self) -> Result<i64, RepoError> {
+        let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM reservations")
+            .fetch_one(&self.pool)
+            .await?;
+        Ok(count)
+    }
 }
