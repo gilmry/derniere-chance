@@ -1382,6 +1382,7 @@ dependencies = [
  "aws-config",
  "aws-credential-types",
  "aws-sdk-s3",
+ "base64 0.22.1",
  "bcrypt",
  "chrono",
  "dotenvy",
@@ -1391,12 +1392,14 @@ dependencies = [
  "rust_decimal_macros",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "sqlx",
  "thiserror",
  "tokio",
  "tracing",
  "tracing-actix-web",
  "tracing-subscriber",
+ "urlencoding",
  "uuid",
 ]
 

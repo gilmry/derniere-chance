@@ -2,7 +2,8 @@ use std::sync::Arc;
 
 use crate::application::use_cases::{
     AdminAuthUseCases, AdminUseCases, CatalogUseCases, ConsumerAuthUseCases, DashboardUseCases,
-    MerchantAuthUseCases, ProductUseCases, ReservationUseCases, SubscriptionUseCases,
+    MerchantAuthUseCases, OAuthUseCases, ProductUseCases, ReservationUseCases,
+    SubscriptionUseCases,
 };
 use crate::infrastructure::storage::PhotoStorage;
 
@@ -18,4 +19,7 @@ pub struct AppState {
     pub reservation_use_cases: Arc<ReservationUseCases>,
     pub dashboard_use_cases: Arc<DashboardUseCases>,
     pub photo_storage: Arc<PhotoStorage>,
+    /// OAuth 2.1 + PKCE authorization server backing the `/mcp` endpoint -
+    /// see `infrastructure::web::{oauth, mcp}`.
+    pub oauth_use_cases: Arc<OAuthUseCases>,
 }

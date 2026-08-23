@@ -92,7 +92,7 @@ impl MerchantAuthUseCases {
             )
             .await;
 
-        let token = self.mint_token(&merchant)?;
+        let token = self.mint_token(&merchant, Duration::hours(TOKEN_LIFETIME_HOURS))?;
         Ok(AuthResponse { token })
     }
 
@@ -109,12 +109,20 @@ impl MerchantAuthUseCases {
             return Err(MerchantAuthError::InvalidCredentials);
         }
 
-        let token = self.mint_token(&merchant)?;
+        let token = self.mint_token(&merchant, Duration::hours(TOKEN_LIFETIME_HOURS))?;
         Ok(AuthResponse { token })
     }
 
-    fn mint_token(&self, merchant: &Merchant) -> Result<String, MerchantAuthError> {
-        let exp = (Utc::now() + Duration::hours(TOKEN_LIFETIME_HOURS)).timestamp() as usize;
+    /// Exposed (not just used internally) so `OAuthUseCases` can mint the
+    /// exact same JWT shape for the MCP/OAuth flow, just with a shorter,
+    /// refreshable lifetime instead of the 24h `/marchands/connexion` one -
+    /// no REST handler needs to special-case a token that came from OAuth.
+    pub fn mint_token(
+        &self,
+        merchant: &Merchant,
+        lifetime: Duration,
+    ) -> Result<String, MerchantAuthError> {
+        let exp = (Utc::now() + lifetime).timestamp() as usize;
         let claims = Claims {
             sub: merchant.id,
             email: merchant.email.clone(),
