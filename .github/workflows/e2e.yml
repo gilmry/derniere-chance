@@ -73,6 +73,15 @@ jobs:
           path: e2e/playwright-report/
           retention-days: 7
 
+      - name: Upload videos
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-videos
+          path: e2e/test-results/**/*.webm
+          retention-days: 7
+          if-no-files-found: ignore
+
       - name: Dump backend logs on failure
         if: failure()
         run: docker compose logs backend-dev --tail 200
