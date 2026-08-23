@@ -19,6 +19,12 @@ jobs:
       - name: Copy .env.example to .env
         run: cp .env.example .env
 
+      - name: Create shared Traefik network
+        # Compose valide tous les réseaux déclarés dans le fichier même pour
+        # un profil qui ne les utilise pas - le prod frontend référence le
+        # réseau Traefik partagé (externe, absent en CI).
+        run: docker network create ecosolva-web
+
       - name: Start dev stack
         run: docker compose --profile dev up -d --build
 

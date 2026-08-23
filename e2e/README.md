@@ -16,6 +16,9 @@ contrat API que la prod.
 ```sh
 # depuis la racine du repo
 cp .env.example .env   # si pas déjà fait
+docker network create ecosolva-web   # réseau Traefik partagé, requis même en dev
+                                      # (compose valide tous les réseaux déclarés,
+                                      # y compris ceux du profil prod)
 docker compose --profile dev up -d --build
 
 cd e2e
