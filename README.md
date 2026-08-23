@@ -47,6 +47,9 @@ le rapport (vidéos incluses) est publié sur GitHub Pages.
 - [`docs/n8n-notifications-workflow.md`](./docs/n8n-notifications-workflow.md) —
   workflow n8n qui envoie un email pour chaque événement notable
   (inscription marchand, réservation, retrait).
+- [`docs/mcp-oauth.md`](./docs/mcp-oauth.md) — serveur MCP (`/mcp`) avec
+  OAuth 2.1/PKCE maison, pour connecter un client MCP (Claude Code, Claude
+  Desktop, claude.ai) au compte d'un marchand en lecture/écriture.
 
 ## Licence
 

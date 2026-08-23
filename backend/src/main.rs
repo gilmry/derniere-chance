@@ -6,13 +6,15 @@ use actix_web::{web, App, HttpServer};
 use derniere_chance_api::application::ports::{EmailSender, EventNotifier};
 use derniere_chance_api::application::use_cases::{
     AdminAuthUseCases, AdminUseCases, CatalogUseCases, ConsumerAuthUseCases, DashboardUseCases,
-    MerchantAuthUseCases, ProductUseCases, ReservationUseCases, SubscriptionUseCases,
+    MerchantAuthUseCases, OAuthUseCases, ProductUseCases, ReservationUseCases,
+    SubscriptionUseCases,
 };
 use derniere_chance_api::infrastructure::bootstrap::bootstrap_admin;
 use derniere_chance_api::infrastructure::database::create_pool;
 use derniere_chance_api::infrastructure::database::repositories::{
-    PostgresAdminRepository, PostgresConsumerRepository, PostgresMerchantRepository,
-    PostgresNotificationRepository, PostgresProductRepository, PostgresReservationRepository,
+    PostgresAdminRepository, PostgresAuthorizationCodeRepository, PostgresConsumerRepository,
+    PostgresMerchantRepository, PostgresNotificationRepository, PostgresOAuthClientRepository,
+    PostgresProductRepository, PostgresRefreshTokenRepository, PostgresReservationRepository,
     PostgresSubscriptionRepository,
 };
 use derniere_chance_api::infrastructure::email::LoggingEmailSender;
@@ -53,6 +55,9 @@ async fn main() -> std::io::Result<()> {
     let reservation_repo = Arc::new(PostgresReservationRepository::new(db.clone()));
     let notification_repo = Arc::new(PostgresNotificationRepository::new(db.clone()));
     let admin_repo = Arc::new(PostgresAdminRepository::new(db.clone()));
+    let oauth_client_repo = Arc::new(PostgresOAuthClientRepository::new(db.clone()));
+    let oauth_code_repo = Arc::new(PostgresAuthorizationCodeRepository::new(db.clone()));
+    let oauth_refresh_repo = Arc::new(PostgresRefreshTokenRepository::new(db.clone()));
 
     // No transactional-email provider is wired up yet (see VISION.md §8) -
     // this adapter only logs. Swap it for a Resend/SMTP implementation of
@@ -72,12 +77,14 @@ async fn main() -> std::io::Result<()> {
         reservation_repo.clone(),
     ));
 
+    let merchant_auth_use_cases = Arc::new(MerchantAuthUseCases::new(
+        merchant_repo.clone(),
+        jwt_secret.clone(),
+        event_notifier.clone(),
+    ));
+
     let state = web::Data::new(AppState {
-        merchant_auth_use_cases: Arc::new(MerchantAuthUseCases::new(
-            merchant_repo.clone(),
-            jwt_secret.clone(),
-            event_notifier.clone(),
-        )),
+        merchant_auth_use_cases: merchant_auth_use_cases.clone(),
         consumer_auth_use_cases: Arc::new(ConsumerAuthUseCases::new(
             consumer_repo.clone(),
             jwt_secret.clone(),
@@ -97,7 +104,7 @@ async fn main() -> std::io::Result<()> {
         )),
         subscription_use_cases: Arc::new(SubscriptionUseCases::new(
             subscription_repo,
-            merchant_repo,
+            merchant_repo.clone(),
         )),
         reservation_use_cases: Arc::new(ReservationUseCases::new(
             reservation_repo.clone(),
@@ -106,6 +113,13 @@ async fn main() -> std::io::Result<()> {
         )),
         dashboard_use_cases: Arc::new(DashboardUseCases::new(reservation_repo)),
         photo_storage,
+        oauth_use_cases: Arc::new(OAuthUseCases::new(
+            oauth_client_repo,
+            oauth_code_repo,
+            oauth_refresh_repo,
+            merchant_repo,
+            merchant_auth_use_cases,
+        )),
     });
 
     tracing::info!("derniere-chance-api listening on {host}:{port}");
