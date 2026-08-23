@@ -41,17 +41,23 @@
       loading = false;
       return;
     }
-    try {
-      [profile, followed, reservations] = await Promise.all([
-        consumerProfile(token),
-        listFollowedMerchants(token),
-        listMyReservations(token),
-      ]);
-    } catch (err) {
-      loadError = err instanceof ApiError ? err.message : "Impossible de charger ton profil.";
-    } finally {
-      loading = false;
+    const [profileResult, followedResult, reservationsResult] = await Promise.allSettled([
+      consumerProfile(token),
+      listFollowedMerchants(token),
+      listMyReservations(token),
+    ]);
+    if (profileResult.status === "fulfilled") profile = profileResult.value;
+    if (followedResult.status === "fulfilled") followed = followedResult.value;
+    if (reservationsResult.status === "fulfilled") reservations = reservationsResult.value;
+
+    const failed = [profileResult, followedResult, reservationsResult].find(
+      (r) => r.status === "rejected",
+    );
+    if (failed && failed.status === "rejected") {
+      const err = failed.reason;
+      loadError = err instanceof ApiError ? err.message : "Une partie de ton profil n'a pas pu être chargée.";
     }
+    loading = false;
   });
 </script>
 
@@ -63,8 +69,6 @@
       <p>Connecte-toi pour voir ton profil et tes commerçants suivis.</p>
       <a class="btn btn-primary" href="/compte?mode=login">Se connecter</a>
     </div>
-  {:else if loadError}
-    <p class="state error">{loadError}</p>
   {:else}
     <div class="identity">
       <div class="avatar">
@@ -75,6 +79,7 @@
         {#if email}<p class="subtitle">{email}</p>{/if}
       </div>
     </div>
+    {#if loadError}<p class="state error inline">{loadError}</p>{/if}
     <div class="stats">
       <div class="card stat">
         <div class="stat-value">{profile?.paniers_sauves ?? 0}</div>
@@ -134,6 +139,11 @@
     padding: 40px 0;
     text-align: center;
     color: var(--color-muted);
+  }
+
+  .state.inline {
+    padding: 0;
+    text-align: left;
   }
 
   .state.error {
