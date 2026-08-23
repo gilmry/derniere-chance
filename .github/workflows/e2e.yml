@@ -9,9 +9,14 @@ on:
       - main
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   e2e:
     runs-on: ubuntu-latest
+    outputs:
+      test_outcome: ${{ steps.run_tests.outcome }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -62,8 +67,10 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run Playwright tests
+        id: run_tests
         working-directory: e2e
         run: npm test
+        continue-on-error: true
 
       - name: Upload Playwright report
         if: always()
@@ -82,6 +89,38 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+      # Publié sur Pages seulement depuis main (pas les PR - permissions
+      # OIDC non disponibles pour des PR externes), y compris en cas
+      # d'échec : c'est justement là qu'une vidéo est la plus utile.
+      - name: Setup Pages
+        if: always() && github.event_name == 'push'
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        if: always() && github.event_name == 'push'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: e2e/playwright-report/
+
       - name: Dump backend logs on failure
-        if: failure()
+        if: steps.run_tests.outcome == 'failure'
         run: docker compose logs backend-dev --tail 200
+
+      - name: Fail job if tests failed
+        if: steps.run_tests.outcome == 'failure'
+        run: exit 1
+
+  publish-report:
+    needs: e2e
+    if: always() && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
