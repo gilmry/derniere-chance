@@ -1,12 +1,6 @@
-<script lang="ts">
-  import Photo from "./Photo.svelte";
-</script>
-
 <div class="screen">
   <div class="hero">
-    <div class="hero-photo">
-      <Photo shape="rounded" radius={28} label="Illustration invendus sauvés" />
-    </div>
+    <div class="hero-emoji" role="img" aria-label="Panier de fruits et légumes">🧺</div>
     <h1>Sauve un panier,<br />régale-toi malin.</h1>
     <p class="lead">
       Repère les commerçants proches de chez toi et récupère leurs invendus à petit prix.
@@ -43,9 +37,9 @@
     text-align: center;
   }
 
-  .hero-photo {
-    width: 220px;
-    height: 220px;
+  .hero-emoji {
+    font-size: 110px;
+    line-height: 1;
   }
 
   h1 {
