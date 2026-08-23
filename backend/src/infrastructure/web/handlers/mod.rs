@@ -20,7 +20,7 @@ pub use catalog_handlers::{get_merchant, get_offer, list_offers};
 pub use dashboard_handlers::{consumer_profile, merchant_today};
 pub use photo_handlers::upload_photo;
 pub use product_handlers::{list_mine, mark_ecoule, publish};
-pub use reservation_handlers::{reserve, validate_pickup};
+pub use reservation_handlers::{list_my_reservations, reserve, validate_pickup};
 pub use subscription_handlers::{follow, list_followed, unfollow};
 
 pub mod consumer_auth {

@@ -16,6 +16,6 @@ pub use merchant_repository::{MerchantRepository, NewMerchant};
 pub use notification_repository::{NewNotification, NotificationRepository};
 pub use product_repository::{NewProduct, ProductRepository, ProductWithMerchant};
 pub use reservation_repository::{
-    ConsumerStats, MerchantDailyStats, NewReservation, ReservationRepository,
+    ConsumerStats, MerchantDailyStats, NewReservation, ReservationRepository, ReservationSummary,
 };
 pub use subscription_repository::{SubscriberContact, SubscriptionRepository};

@@ -1,14 +1,37 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import Photo from "./Photo.svelte";
-  import { consumerProfile, listFollowedMerchants, formatPrice, ApiError, type ConsumerProfile, type Merchant } from "../lib/api";
+  import {
+    consumerProfile,
+    listFollowedMerchants,
+    listMyReservations,
+    formatPrice,
+    ApiError,
+    type ConsumerProfile,
+    type Merchant,
+    type ReservationSummary,
+  } from "../lib/api";
   import { getConsumerToken, getConsumerEmail } from "../lib/auth";
 
   let profile: ConsumerProfile | null = null;
   let followed: Merchant[] = [];
+  let reservations: ReservationSummary[] = [];
   let loading = true;
   let loadError = "";
   let email = "";
+
+  const STATUT_LABELS: Record<string, string> = {
+    reservee: "À retirer",
+    recuperee: "Récupéré",
+    expiree: "Expiré",
+  };
+
+  function pickupWindow(r: ReservationSummary): string {
+    const opts: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit" };
+    const start = new Date(r.retrait_debut).toLocaleTimeString("fr-FR", opts);
+    const end = new Date(r.retrait_fin).toLocaleTimeString("fr-FR", opts);
+    return `${start} – ${end}`;
+  }
 
   onMount(async () => {
     const token = getConsumerToken();
@@ -18,7 +41,11 @@
       return;
     }
     try {
-      [profile, followed] = await Promise.all([consumerProfile(token), listFollowedMerchants(token)]);
+      [profile, followed, reservations] = await Promise.all([
+        consumerProfile(token),
+        listFollowedMerchants(token),
+        listMyReservations(token),
+      ]);
     } catch (err) {
       loadError = err instanceof ApiError ? err.message : "Impossible de charger ton profil.";
     } finally {
@@ -57,6 +84,24 @@
         <div class="stat-label">économisés</div>
       </div>
     </div>
+    <div class="section-title">Mes réservations</div>
+    <div class="list">
+      {#each reservations as r}
+        <div class="card reservation-row">
+          <div class="reservation-info">
+            <div class="row-name">{r.produit_nom} <span class="status-badge {r.statut === 'reservee' ? 'active' : 'exhausted'}">{STATUT_LABELS[r.statut] ?? r.statut}</span></div>
+            <div class="row-detail">{r.marchand_nom} · retrait {pickupWindow(r)} · {formatPrice(r.prix_demarque)}</div>
+          </div>
+          {#if r.statut === "reservee"}
+            <div class="code">{r.code}</div>
+          {/if}
+        </div>
+      {/each}
+      {#if reservations.length === 0}
+        <p class="empty">Aucune réservation pour le moment.</p>
+      {/if}
+    </div>
+
     <div class="section-title">Commerçants suivis</div>
     <div class="list">
       {#each followed as merchant}
@@ -186,5 +231,36 @@
     font-size: 13px;
     font-weight: 600;
     color: var(--color-ink);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .reservation-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .reservation-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .row-detail {
+    font-size: 11px;
+    color: var(--color-muted);
+  }
+
+  .code {
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--color-primary);
+    background: var(--color-success-bg);
+    padding: 6px 10px;
+    border-radius: 10px;
+    flex-shrink: 0;
   }
 </style>

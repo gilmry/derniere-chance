@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 use crate::application::ports::{
     ConsumerStats, MerchantDailyStats, NewReservation, RepoError, ReservationRepository,
+    ReservationSummary,
 };
 use crate::domain::entities::Reservation;
 use crate::infrastructure::database::DbPool;
@@ -99,5 +100,24 @@ impl ReservationRepository for PostgresReservationRepository {
             .fetch_one(&self.pool)
             .await?;
         Ok(count)
+    }
+
+    async fn list_by_consumer(
+        &self,
+        consommateur_id: Uuid,
+    ) -> Result<Vec<ReservationSummary>, RepoError> {
+        sqlx::query_as::<_, ReservationSummary>(
+            "SELECT r.id, r.code, r.statut, m.nom AS marchand_nom, p.nom AS produit_nom, \
+             p.prix_demarque, p.retrait_debut, p.retrait_fin, r.created_at \
+             FROM reservations r \
+             JOIN produits p ON p.id = r.produit_id \
+             JOIN marchands m ON m.id = p.marchand_id \
+             WHERE r.consommateur_id = $1 \
+             ORDER BY r.created_at DESC",
+        )
+        .bind(consommateur_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(Into::into)
     }
 }

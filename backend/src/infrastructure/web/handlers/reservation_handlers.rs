@@ -36,7 +36,7 @@ pub async fn validate_pickup(
         .validate_pickup(merchant.marchand_id, &path.into_inner())
         .await
     {
-        Ok(()) => HttpResponse::NoContent().finish(),
+        Ok(validation) => HttpResponse::Ok().json(validation),
         Err(ReservationError::ReservationNotFound) => not_found("reservation not found"),
         Err(ReservationError::Forbidden) => {
             forbidden("this reservation belongs to another marchand")
@@ -44,6 +44,23 @@ pub async fn validate_pickup(
         Err(err @ ReservationError::AlreadyRedeemed) => conflict(&err.to_string()),
         Err(err) => {
             tracing::error!(?err, "validate_pickup failed");
+            internal_error()
+        }
+    }
+}
+
+pub async fn list_my_reservations(
+    state: web::Data<AppState>,
+    consumer: AuthenticatedConsumer,
+) -> HttpResponse {
+    match state
+        .reservation_use_cases
+        .list_my_reservations(consumer.consommateur_id)
+        .await
+    {
+        Ok(reservations) => HttpResponse::Ok().json(reservations),
+        Err(err) => {
+            tracing::error!(?err, "list_my_reservations failed");
             internal_error()
         }
     }

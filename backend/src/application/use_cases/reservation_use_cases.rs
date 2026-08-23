@@ -3,9 +3,9 @@ use std::sync::Arc;
 use thiserror::Error;
 use uuid::Uuid;
 
-use crate::application::dto::ReservationConfirmationDto;
+use crate::application::dto::{PickupValidationDto, ReservationConfirmationDto};
 use crate::application::ports::{
-    NewReservation, ProductRepository, RepoError, ReservationRepository,
+    NewReservation, ProductRepository, RepoError, ReservationRepository, ReservationSummary,
 };
 use crate::domain::entities::ReservationStatus;
 use crate::domain::services::reservation_code;
@@ -97,7 +97,7 @@ impl ReservationUseCases {
         &self,
         marchand_id: Uuid,
         code: &str,
-    ) -> Result<(), ReservationError> {
+    ) -> Result<PickupValidationDto, ReservationError> {
         let reservation = self
             .reservation_repo
             .find_by_code(code)
@@ -118,6 +118,19 @@ impl ReservationUseCases {
         }
 
         self.reservation_repo.mark_recuperee(reservation.id).await?;
-        Ok(())
+        Ok(PickupValidationDto {
+            code: reservation.code,
+            produit_nom: product.nom,
+        })
+    }
+
+    pub async fn list_my_reservations(
+        &self,
+        consommateur_id: Uuid,
+    ) -> Result<Vec<ReservationSummary>, ReservationError> {
+        Ok(self
+            .reservation_repo
+            .list_by_consumer(consommateur_id)
+            .await?)
     }
 }

@@ -5,6 +5,7 @@
     merchantDashboard,
     listMyProducts,
     markEcoule,
+    validatePickup,
     formatPrice,
     ApiError,
     type MerchantDashboard,
@@ -16,6 +17,31 @@
   let products: Product[] = [];
   let loading = true;
   let loadError = "";
+
+  let pickupCode = "";
+  let pickupChecking = false;
+  let pickupResult = "";
+  let pickupError = "";
+
+  async function checkPickupCode(event: SubmitEvent) {
+    event.preventDefault();
+    const token = getMerchantToken();
+    if (!token || !pickupCode.trim()) return;
+    pickupChecking = true;
+    pickupResult = "";
+    pickupError = "";
+    try {
+      const validation = await validatePickup(pickupCode.trim().toUpperCase(), token);
+      pickupResult = `✓ "${validation.produit_nom}" remis - code ${validation.code}`;
+      pickupCode = "";
+      // Les compteurs du jour (paniers sauvés / chiffre récupéré) viennent de bouger.
+      merchantDashboard(token).then((s) => (stats = s));
+    } catch (err) {
+      pickupError = err instanceof ApiError ? err.message : "Vérification impossible.";
+    } finally {
+      pickupChecking = false;
+    }
+  }
 
   onMount(async () => {
     const token = getMerchantToken();
@@ -55,6 +81,20 @@
   {:else if loadError}
     <p class="state error">{loadError}</p>
   {:else}
+    <form class="pickup-check" on:submit={checkPickupCode}>
+      <input
+        class="pickup-input"
+        placeholder="Code du client (ex. DC-4821)"
+        bind:value={pickupCode}
+        disabled={pickupChecking}
+      />
+      <button class="pickup-btn" type="submit" disabled={pickupChecking || !pickupCode.trim()}>
+        {pickupChecking ? "..." : "Valider"}
+      </button>
+    </form>
+    {#if pickupResult}<p class="pickup-result">{pickupResult}</p>{/if}
+    {#if pickupError}<p class="pickup-result error">{pickupError}</p>{/if}
+
     <div class="stats">
       <div class="stat stat-dark">
         <div class="stat-value">{stats?.paniers_sauves ?? 0}</div>
@@ -122,6 +162,43 @@
   }
 
   .state.error {
+    color: #c0392b;
+  }
+
+  .pickup-check {
+    display: flex;
+    gap: 8px;
+  }
+
+  .pickup-input {
+    flex: 1;
+    height: 46px;
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    padding: 0 14px;
+    font-size: 14px;
+    font-family: var(--font-body);
+    text-transform: uppercase;
+  }
+
+  .pickup-btn {
+    height: 46px;
+    padding: 0 18px;
+    border-radius: 12px;
+    background: var(--color-ink);
+    color: #fff;
+    font-weight: 700;
+    font-size: 13px;
+  }
+
+  .pickup-result {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-primary);
+    margin-top: -8px;
+  }
+
+  .pickup-result.error {
     color: #c0392b;
   }
 

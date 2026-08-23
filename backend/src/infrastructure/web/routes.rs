@@ -55,6 +55,10 @@ pub fn configure_routes(cfg: &mut web::ServiceConfig) {
             "/consommateurs/moi/profil",
             web::get().to(handlers::consumer_profile),
         )
+        .route(
+            "/consommateurs/moi/reservations",
+            web::get().to(handlers::list_my_reservations),
+        )
         // Public catalogue
         .route("/offres", web::get().to(handlers::list_offers))
         .route("/offres/{id}", web::get().to(handlers::get_offer))

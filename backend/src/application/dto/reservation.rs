@@ -21,6 +21,13 @@ pub struct ReservationConfirmationDto {
     pub retrait_fin: DateTime<Utc>,
 }
 
+/// What the marchand sees after avoir validé un code en boutique.
+#[derive(Debug, Serialize)]
+pub struct PickupValidationDto {
+    pub code: String,
+    pub produit_nom: String,
+}
+
 impl ReservationConfirmationDto {
     pub fn new(reservation: Reservation, offer: ProductWithMerchant) -> Self {
         Self {

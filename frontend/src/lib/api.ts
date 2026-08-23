@@ -120,6 +120,23 @@ export interface ReservationConfirmation {
   retrait_fin: string;
 }
 
+export interface ReservationSummary {
+  id: string;
+  code: string;
+  statut: ReservationStatus;
+  marchand_nom: string;
+  produit_nom: string;
+  prix_demarque: string;
+  retrait_debut: string;
+  retrait_fin: string;
+  created_at: string;
+}
+
+export interface PickupValidation {
+  code: string;
+  produit_nom: string;
+}
+
 export interface MerchantDashboard {
   paniers_sauves: number;
   chiffre_recupere: string;
@@ -208,6 +225,10 @@ export function consumerProfile(token: string): Promise<ConsumerProfile> {
   return apiFetch("/consommateurs/moi/profil", { token });
 }
 
+export function listMyReservations(token: string): Promise<ReservationSummary[]> {
+  return apiFetch("/consommateurs/moi/reservations", { token });
+}
+
 // --- Backoffice marchand (auth requise) ---
 
 export function listMyProducts(token: string): Promise<Product[]> {
@@ -262,7 +283,7 @@ export function merchantDashboard(token: string): Promise<MerchantDashboard> {
   return apiFetch("/marchands/moi/dashboard", { token });
 }
 
-export function validatePickup(code: string, token: string): Promise<void> {
+export function validatePickup(code: string, token: string): Promise<PickupValidation> {
   return apiFetch(`/marchands/moi/reservations/${code}/valider`, { method: "POST", token });
 }
 

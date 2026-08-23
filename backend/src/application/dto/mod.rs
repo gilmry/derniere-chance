@@ -12,4 +12,4 @@ pub use catalog::{MerchantProfileDto, OfferDto};
 pub use dashboard::{ConsumerProfileDto, MerchantDashboardDto};
 pub use merchant::MerchantResponseDto;
 pub use product::{CreateProductDto, ProductResponseDto};
-pub use reservation::ReservationConfirmationDto;
+pub use reservation::{PickupValidationDto, ReservationConfirmationDto};
