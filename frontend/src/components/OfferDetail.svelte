@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import Photo from "./Photo.svelte";
+  import BottomNav from "./BottomNav.svelte";
   import { getOffer, reserveOffer, ApiError, formatPrice, formatDistance, type Offer } from "../lib/api";
   import { getConsumerToken } from "../lib/auth";
   import { getQueryParam } from "../lib/params";
@@ -104,6 +105,7 @@
       {/if}
     </div>
   {/if}
+  <BottomNav active="feed" />
 </div>
 
 <style>

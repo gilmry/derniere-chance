@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import Photo from "./Photo.svelte";
+  import BottomNav from "./BottomNav.svelte";
   import {
     consumerProfile,
     listFollowedMerchants,
@@ -117,6 +118,7 @@
       {/if}
     </div>
   {/if}
+  <BottomNav active="profil" />
 </div>
 
 <style>

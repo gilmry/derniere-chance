@@ -1,6 +1,7 @@
 <script lang="ts">
   import Photo from "./Photo.svelte";
   import OffersMap from "./OffersMap.svelte";
+  import BottomNav from "./BottomNav.svelte";
   import { listOffers, formatPrice, formatDistance, ApiError, MERCHANT_CATEGORIES, type Offer } from "../lib/api";
   import { getBrowserPosition, type Coords } from "../lib/geoloc";
 
@@ -115,6 +116,7 @@
       {/if}
     </div>
   {/if}
+  <BottomNav active="feed" />
 </div>
 
 <style>
