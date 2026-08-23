@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { merchantLogin, merchantRegister, ApiError } from "../lib/api";
+  import { merchantLogin, merchantRegister, ApiError, MERCHANT_CATEGORIES } from "../lib/api";
   import { setMerchantToken } from "../lib/auth";
   import { getBrowserPosition } from "../lib/geoloc";
   import { getQueryParam } from "../lib/params";
@@ -60,7 +60,12 @@
       {#if mode === "register"}
         <input placeholder="Nom du commerce" bind:value={nom} required />
         <input placeholder="Adresse" bind:value={adresse} required />
-        <input placeholder="Catégorie (ex. Boulangerie)" bind:value={categorie} required />
+        <select bind:value={categorie} required>
+          <option value="" disabled selected>Catégorie</option>
+          {#each Object.entries(MERCHANT_CATEGORIES) as [cat, emoji]}
+            <option value={cat}>{emoji} {cat}</option>
+          {/each}
+        </select>
       {/if}
       <input placeholder="Email professionnel" type="email" bind:value={email} required />
       <input placeholder="Mot de passe" type="password" bind:value={password} required minlength="8" />
@@ -122,7 +127,8 @@
     gap: 12px;
   }
 
-  input {
+  input,
+  select {
     height: 50px;
     border-radius: 14px;
     border: 1px solid rgba(255, 255, 255, 0.15);
@@ -131,6 +137,10 @@
     padding: 0 16px;
     font-size: 14px;
     font-family: var(--font-body);
+  }
+
+  select option {
+    color: #000;
   }
 
   input::placeholder {

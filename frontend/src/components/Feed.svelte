@@ -1,10 +1,10 @@
 <script lang="ts">
   import Photo from "./Photo.svelte";
   import OffersMap from "./OffersMap.svelte";
-  import { listOffers, formatPrice, formatDistance, ApiError, type Offer } from "../lib/api";
+  import { listOffers, formatPrice, formatDistance, ApiError, MERCHANT_CATEGORIES, type Offer } from "../lib/api";
   import { getBrowserPosition, type Coords } from "../lib/geoloc";
 
-  const categories = ["Tout", "Boulangerie", "Primeur"];
+  const categories = ["Tout", ...Object.keys(MERCHANT_CATEGORIES)];
 
   let view: "carte" | "liste" = "liste";
   let category = "Tout";
@@ -61,7 +61,7 @@
     <div class="chips">
       {#each categories as cat}
         <button class="chip" class:active={category === cat} on:click={() => (category = cat)}>
-          {cat === "Boulangerie" ? "🥐 Boulangerie" : cat === "Primeur" ? "🥕 Primeur" : cat}
+          {MERCHANT_CATEGORIES[cat] ? `${MERCHANT_CATEGORIES[cat]} ${cat}` : cat}
         </button>
       {/each}
     </div>

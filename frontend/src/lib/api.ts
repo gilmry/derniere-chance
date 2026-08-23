@@ -5,6 +5,17 @@ import type { Coords } from "./geoloc";
 
 const API_URL = import.meta.env.PUBLIC_API_URL ?? "http://localhost:8080";
 
+// Catégories affichées comme filtres dans le feed - un marchand doit choisir
+// l'une d'elles à l'inscription pour que le filtre par catégorie fonctionne
+// (comparaison exacte côté backend, pas de texte libre reconnu).
+export const MERCHANT_CATEGORIES: Record<string, string> = {
+  Boulangerie: "🥐",
+  Primeur: "🥕",
+  Boucherie: "🥩",
+  Épicerie: "🛒",
+  Fleuriste: "💐",
+};
+
 export class ApiError extends Error {
   status: number;
   constructor(status: number, message: string) {
