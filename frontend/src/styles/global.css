@@ -185,6 +185,11 @@ button,
   color: var(--color-muted);
 }
 
+.app-footer-sep {
+  color: var(--color-border);
+  padding: 0 6px;
+}
+
 .brand-mark {
   width: 36px;
   height: 36px;
