@@ -1,9 +1,16 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { merchantLogin, merchantRegister, ApiError } from "../lib/api";
   import { setMerchantToken } from "../lib/auth";
   import { getBrowserPosition } from "../lib/geoloc";
+  import { getQueryParam } from "../lib/params";
 
   let mode: "login" | "register" = "login";
+
+  onMount(() => {
+    const qMode = getQueryParam("mode");
+    if (qMode === "login" || qMode === "register") mode = qMode;
+  });
   let email = "";
   let password = "";
   let nom = "";

@@ -15,7 +15,7 @@
   <div class="actions">
     <a class="btn btn-primary" href="/compte?mode=register">Créer un compte</a>
     <a class="btn btn-secondary" href="/compte?mode=login">J'ai déjà un compte</a>
-    <a class="merchant-link" href="/pro/login">Vous êtes commerçant ? Accès pro</a>
+    <a class="merchant-link" href="/pro/login?mode=register">Vous êtes commerçant ? Créer mon compte pro</a>
     <div class="dots">
       <span class="dot dot--active"></span>
       <span class="dot"></span>
