@@ -54,10 +54,19 @@ test("marchand publie, consommateur réserve, marchand valide, admin nettoie", a
     await page.waitForURL("**/feed");
   });
 
-  let pickupCode = "";
-  await test.step("le consommateur réserve le panier", async () => {
+  await test.step("le consommateur suit le commerçant", async () => {
     await expect(page.getByText(BASKET_NAME)).toBeVisible({ timeout: 15_000 });
     await page.getByText(BASKET_NAME).click();
+    await page.waitForURL("**/offre?id=*");
+    await page.getByRole("link", { name: "Boulangerie e2e" }).click();
+    await page.waitForURL("**/marchand?id=*");
+    await page.getByRole("button", { name: "+ S'abonner" }).click();
+    await expect(page.getByRole("button", { name: "✓ Abonné" })).toBeVisible();
+  });
+
+  let pickupCode = "";
+  await test.step("le consommateur réserve le panier", async () => {
+    await page.goBack();
     await page.waitForURL("**/offre?id=*");
     await page.getByRole("button", { name: "Réserver ce panier" }).click();
     await page.waitForURL("**/reservation");
@@ -65,10 +74,15 @@ test("marchand publie, consommateur réserve, marchand valide, admin nettoie", a
     expect(pickupCode).toMatch(/^DC-\d+$/);
   });
 
-  await test.step("la réservation apparaît dans le profil du consommateur", async () => {
+  await test.step("le profil du consommateur affiche tout, sans erreur", async () => {
+    // Régression : lister les commerçants suivis plantait côté backend avec
+    // "internal error" dès qu'il y en avait au moins un (colonnes manquantes
+    // dans la requête SQL) - ce step couvre ce chemin.
     await page.goto("/profil");
     await expect(page.getByText(BASKET_NAME)).toBeVisible();
     await expect(page.getByText(pickupCode)).toBeVisible();
+    await expect(page.getByRole("link", { name: "Boulangerie e2e" })).toBeVisible();
+    await expect(page.locator(".state.error")).toHaveCount(0);
   });
 
   await test.step("le marchand valide le code et marque le panier enlevé", async () => {

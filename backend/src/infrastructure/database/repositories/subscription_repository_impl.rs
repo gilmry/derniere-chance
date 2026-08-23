@@ -60,7 +60,8 @@ impl SubscriptionRepository for PostgresSubscriptionRepository {
         consommateur_id: Uuid,
     ) -> Result<Vec<Merchant>, RepoError> {
         sqlx::query_as::<_, Merchant>(
-            "SELECT m.id, m.nom, m.adresse, m.categorie, m.note, m.email, m.password_hash, m.created_at
+            "SELECT m.id, m.nom, m.adresse, m.categorie, m.note, m.email, m.password_hash, \
+             m.latitude, m.longitude, m.logo_url, m.created_at
              FROM marchands m
              JOIN abonnements a ON a.marchand_id = m.id
              WHERE a.consommateur_id = $1
