@@ -87,6 +87,7 @@ export interface Merchant {
   note: string | null;
   latitude: number | null;
   longitude: number | null;
+  logo_url: string | null;
   distance_km: number | null;
 }
 
@@ -193,6 +194,10 @@ export function merchantLogin(email: string, password: string): Promise<AuthResp
   return apiFetch("/marchands/connexion", { method: "POST", body: { email, password } });
 }
 
+export function getMyMerchantProfile(token: string): Promise<Merchant> {
+  return apiFetch("/marchands/moi", { token });
+}
+
 // --- Auth consommateur ---
 
 export function consumerRegister(email: string, password: string): Promise<AuthResponse> {
@@ -275,6 +280,30 @@ export async function uploadProductPhoto(file: File, token: string): Promise<str
   return (data as { photo_url: string }).photo_url;
 }
 
+/// Upload le logo/photo du commerce, l'enregistre sur le compte marchand
+/// (côté backend) et renvoie son URL publique.
+export async function uploadMerchantLogo(file: File, token: string): Promise<string> {
+  const form = new FormData();
+  form.append("photo", file);
+
+  const res = await fetch(`${API_URL}/marchands/moi/logo`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  });
+
+  const data = await res.json().catch(() => undefined);
+
+  if (!res.ok) {
+    const message = (data && typeof data === "object" && "error" in data)
+      ? String((data as { error: unknown }).error)
+      : `Erreur ${res.status}`;
+    throw new ApiError(res.status, message);
+  }
+
+  return (data as { logo_url: string }).logo_url;
+}
+
 export function markEcoule(productId: string, token: string): Promise<Product> {
   return apiFetch(`/marchands/moi/produits/${productId}/ecoule`, { method: "PATCH", token });
 }
@@ -298,6 +327,7 @@ export interface AdminMerchant {
   email: string;
   latitude: number | null;
   longitude: number | null;
+  logo_url: string | null;
   created_at: string;
 }
 

@@ -4,7 +4,11 @@ use chrono::{Duration, Utc};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use thiserror::Error;
 
-use crate::application::dto::{AuthResponse, Claims, LoginRequest, RegisterMerchantRequest};
+use uuid::Uuid;
+
+use crate::application::dto::{
+    AuthResponse, Claims, LoginRequest, MerchantResponseDto, RegisterMerchantRequest,
+};
 use crate::application::ports::{MerchantRepository, NewMerchant, RepoError};
 use crate::domain::entities::Merchant;
 
@@ -18,6 +22,8 @@ pub enum MerchantAuthError {
     InvalidToken,
     #[error("password hashing failed")]
     HashingFailed,
+    #[error("merchant not found")]
+    NotFound,
     #[error("internal error: {0}")]
     Internal(#[from] RepoError),
 }
@@ -103,6 +109,26 @@ impl MerchantAuthUseCases {
             &EncodingKey::from_secret(self.jwt_secret.as_bytes()),
         )
         .map_err(|_| MerchantAuthError::InvalidToken)
+    }
+
+    pub async fn update_logo(
+        &self,
+        marchand_id: Uuid,
+        logo_url: &str,
+    ) -> Result<Merchant, MerchantAuthError> {
+        Ok(self.merchant_repo.update_logo(marchand_id, logo_url).await?)
+    }
+
+    pub async fn get_own_profile(
+        &self,
+        marchand_id: Uuid,
+    ) -> Result<MerchantResponseDto, MerchantAuthError> {
+        let merchant = self
+            .merchant_repo
+            .find_by_id(marchand_id)
+            .await?
+            .ok_or(MerchantAuthError::NotFound)?;
+        Ok(merchant.into())
     }
 
     pub fn verify_token(&self, token: &str) -> Result<Claims, MerchantAuthError> {

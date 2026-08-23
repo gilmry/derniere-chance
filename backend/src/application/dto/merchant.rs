@@ -13,6 +13,7 @@ pub struct MerchantResponseDto {
     pub note: Option<Decimal>,
     pub latitude: Option<f64>,
     pub longitude: Option<f64>,
+    pub logo_url: Option<String>,
     /// Distance au marchand en km si le consommateur a partagé sa position
     /// (`?lat=&lon=`) et que le marchand a la sienne. Voir OfferDto::distance_km.
     pub distance_km: Option<f64>,
@@ -28,6 +29,7 @@ impl From<Merchant> for MerchantResponseDto {
             note: merchant.note,
             latitude: merchant.latitude,
             longitude: merchant.longitude,
+            logo_url: merchant.logo_url,
             distance_km: None,
         }
     }

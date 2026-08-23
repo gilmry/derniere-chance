@@ -6,17 +6,45 @@
     listMyProducts,
     markEcoule,
     validatePickup,
+    getMyMerchantProfile,
+    uploadMerchantLogo,
     formatPrice,
     ApiError,
     type MerchantDashboard,
     type Product,
+    type Merchant,
   } from "../lib/api";
   import { getMerchantToken } from "../lib/auth";
 
   let stats: MerchantDashboard | null = null;
   let products: Product[] = [];
+  let merchant: Merchant | null = null;
   let loading = true;
   let loadError = "";
+
+  let logoFileInput: HTMLInputElement;
+  let logoPreview: string | null = null;
+  let uploadingLogo = false;
+  let logoError = "";
+
+  async function onLogoChange(event: Event) {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    const token = getMerchantToken();
+    if (!token) return;
+
+    logoPreview = URL.createObjectURL(file);
+    logoError = "";
+    uploadingLogo = true;
+    try {
+      const logo_url = await uploadMerchantLogo(file, token);
+      if (merchant) merchant = { ...merchant, logo_url };
+    } catch (err) {
+      logoError = err instanceof ApiError ? err.message : "L'envoi du logo a échoué.";
+    } finally {
+      uploadingLogo = false;
+    }
+  }
 
   let pickupCode = "";
   let pickupChecking = false;
@@ -50,7 +78,11 @@
       return;
     }
     try {
-      [stats, products] = await Promise.all([merchantDashboard(token), listMyProducts(token)]);
+      [stats, products, merchant] = await Promise.all([
+        merchantDashboard(token),
+        listMyProducts(token),
+        getMyMerchantProfile(token),
+      ]);
     } catch (err) {
       loadError = err instanceof ApiError ? err.message : "Impossible de charger le tableau de bord.";
     } finally {
@@ -60,6 +92,23 @@
 
   function pickupEnd(p: Product): string {
     return new Date(p.retrait_fin).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  // Repart d'un panier déjà écoulé/expiré sans tout retaper : nom, description,
+  // prix et photo repris, la fenêtre de retrait (forcément passée) est à resaisir.
+  function recreate(product: Product) {
+    sessionStorage.setItem(
+      "dc_recreate_product",
+      JSON.stringify({
+        nom: product.nom,
+        description: product.description,
+        prix_initial: product.prix_initial,
+        prix_demarque: product.prix_demarque,
+        quantite: product.quantite,
+        photo_url: product.photo_url,
+      }),
+    );
+    window.location.href = "/pro/panier/nouveau";
   }
 
   async function ecoule(id: string) {
@@ -75,7 +124,24 @@
 </script>
 
 <div class="screen">
-  <h1>Aujourd'hui</h1>
+  <div class="header-row">
+    <h1>Aujourd'hui</h1>
+    {#if !loading && !loadError}
+      <button class="logo-btn" on:click={() => logoFileInput.click()} type="button" aria-label="Changer le logo">
+        <Photo shape="circle" label={merchant?.nom ?? "Logo"} src={logoPreview ?? merchant?.logo_url} />
+        {#if uploadingLogo}<span class="logo-spinner">...</span>{/if}
+      </button>
+      <input
+        class="visually-hidden"
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        capture="environment"
+        bind:this={logoFileInput}
+        on:change={onLogoChange}
+      />
+    {/if}
+  </div>
+  {#if logoError}<p class="pickup-result error">{logoError}</p>{/if}
   {#if loading}
     <p class="state">Chargement...</p>
   {:else if loadError}
@@ -128,9 +194,12 @@
           {#if product.statut === "publie"}
             <button class="mark-btn" on:click={() => ecoule(product.id)}>Marquer écoulé</button>
           {:else}
-            <span class="status-badge exhausted">
-              {product.statut === "ecoule" ? "Écoulé" : "Expiré"}
-            </span>
+            <div class="row-actions">
+              <span class="status-badge exhausted">
+                {product.statut === "ecoule" ? "Écoulé" : "Expiré"}
+              </span>
+              <button class="mark-btn" on:click={() => recreate(product)}>Recréer</button>
+            </div>
           {/if}
         </div>
       {/each}
@@ -151,8 +220,46 @@
     overflow-y: auto;
   }
 
+  .header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
   h1 {
     font-size: 19px;
+  }
+
+  .logo-btn {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    padding: 0;
+    border: none;
+    background: none;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .logo-spinner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
   }
 
   .state {
@@ -296,6 +403,14 @@
   .row-detail {
     font-size: 11px;
     color: var(--color-muted);
+  }
+
+  .row-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    flex-shrink: 0;
   }
 
   .mark-btn {

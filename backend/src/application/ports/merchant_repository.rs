@@ -25,4 +25,5 @@ pub trait MerchantRepository: Send + Sync {
     /// (ON DELETE CASCADE), donc sur réservations/notifications par ricochet.
     async fn delete(&self, id: Uuid) -> Result<(), RepoError>;
     async fn count(&self) -> Result<i64, RepoError>;
+    async fn update_logo(&self, id: Uuid, logo_url: &str) -> Result<Merchant, RepoError>;
 }

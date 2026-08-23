@@ -22,6 +22,7 @@ pub fn configure_routes(cfg: &mut web::ServiceConfig) {
             web::post().to(handlers::consumer_auth::login),
         )
         // Marchand backoffice (auth: marchand)
+        .route("/marchands/moi", web::get().to(handlers::merchant_auth::me))
         .route(
             "/marchands/moi/produits",
             web::post().to(handlers::publish),
@@ -29,6 +30,10 @@ pub fn configure_routes(cfg: &mut web::ServiceConfig) {
         .route(
             "/marchands/moi/produits/photo",
             web::post().to(handlers::upload_photo),
+        )
+        .route(
+            "/marchands/moi/logo",
+            web::post().to(handlers::upload_logo),
         )
         .route(
             "/marchands/moi/produits",

@@ -75,14 +75,16 @@ impl PhotoStorage {
     }
 
     /// Upload une photo et renvoie son URL publique. `extension` sans le
-    /// point (ex. `"jpg"`).
+    /// point (ex. `"jpg"`), `prefix` sans slash de fin (ex. `"produits"`,
+    /// `"marchands"`) pour séparer les objets par usage dans le bucket.
     pub async fn upload(
         &self,
+        prefix: &str,
         bytes: Vec<u8>,
         content_type: &str,
         extension: &str,
     ) -> Result<String, String> {
-        let key = format!("produits/{}.{extension}", Uuid::new_v4());
+        let key = format!("{prefix}/{}.{extension}", Uuid::new_v4());
 
         self.client
             .put_object()

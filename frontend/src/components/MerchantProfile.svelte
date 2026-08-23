@@ -79,7 +79,7 @@
     <div class="body">
       <div class="identity">
         <div class="avatar">
-          <Photo shape="rounded" radius={16} label="Logo" />
+          <Photo shape="rounded" radius={16} label="Logo" src={merchant.logo_url} />
         </div>
         <div class="identity-text">
           <h1>{merchant.nom}</h1>

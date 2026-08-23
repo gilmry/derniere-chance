@@ -15,5 +15,6 @@ pub struct Merchant {
     pub password_hash: String,
     pub latitude: Option<f64>,
     pub longitude: Option<f64>,
+    pub logo_url: Option<String>,
     pub created_at: DateTime<Utc>,
 }

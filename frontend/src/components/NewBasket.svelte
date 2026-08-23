@@ -1,6 +1,10 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { publishProduct, uploadProductPhoto, ApiError } from "../lib/api";
   import { getMerchantToken } from "../lib/auth";
+
+  const RECREATE_KEY = "dc_recreate_product";
+  let recreated = false;
 
   // Aperçu local instantané (blob) pendant l'upload ; remplacé par
   // uploadedPhotoUrl (URL publique MinIO) une fois l'upload terminé, envoyé
@@ -101,6 +105,29 @@
 
   const now = new Date();
   const time = `${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+  // Repris depuis "Recréer" sur un panier écoulé/expiré (MerchantDashboard) :
+  // tout sauf la fenêtre de retrait, forcément passée, à resaisir.
+  onMount(() => {
+    const raw = sessionStorage.getItem(RECREATE_KEY);
+    if (!raw) return;
+    sessionStorage.removeItem(RECREATE_KEY);
+    try {
+      const p = JSON.parse(raw);
+      nom = p.nom ?? nom;
+      description = p.description ?? description;
+      prixInitial = p.prix_initial ?? prixInitial;
+      prixDemarque = p.prix_demarque ?? prixDemarque;
+      quantity = p.quantite ?? quantity;
+      if (p.photo_url) {
+        photoPreview = p.photo_url;
+        uploadedPhotoUrl = p.photo_url;
+      }
+      recreated = true;
+    } catch {
+      // sessionStorage corrompu ou format inattendu - formulaire vide, sans casse.
+    }
+  });
 </script>
 
 <div class="screen">
@@ -108,6 +135,8 @@
     <h1>Nouveau panier</h1>
     <span class="time">{time}</span>
   </div>
+
+  {#if recreated}<p class="recreated-note">Repris d'un panier précédent - vérifie et resaisis l'heure de retrait.</p>{/if}
 
   <form on:submit={publish} class="form">
     <button class="photo" on:click={() => fileInput.click()} type="button">
@@ -123,6 +152,7 @@
       class="visually-hidden"
       type="file"
       accept="image/jpeg,image/png,image/webp"
+      capture="environment"
       bind:this={fileInput}
       on:change={onPhotoChange}
     />
@@ -204,6 +234,14 @@
   .time {
     font-size: 13px;
     color: #8a9188;
+  }
+
+  .recreated-note {
+    font-size: 12px;
+    color: #4ade80;
+    background: rgba(74, 222, 128, 0.1);
+    padding: 8px 12px;
+    border-radius: 10px;
   }
 
   .photo {
