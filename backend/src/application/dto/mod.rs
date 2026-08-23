@@ -10,6 +10,6 @@ pub use auth::{
 };
 pub use catalog::{MerchantProfileDto, OfferDto};
 pub use dashboard::{ConsumerProfileDto, MerchantDashboardDto};
-pub use merchant::MerchantResponseDto;
+pub use merchant::{MerchantResponseDto, UpdateMerchantDto};
 pub use product::{CreateProductDto, ProductResponseDto};
 pub use reservation::{PickupValidationDto, ReservationConfirmationDto};

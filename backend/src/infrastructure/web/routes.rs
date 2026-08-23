@@ -24,6 +24,10 @@ pub fn configure_routes(cfg: &mut web::ServiceConfig) {
         // Marchand backoffice (auth: marchand)
         .route("/marchands/moi", web::get().to(handlers::merchant_auth::me))
         .route(
+            "/marchands/moi",
+            web::patch().to(handlers::merchant_auth::update_me),
+        )
+        .route(
             "/marchands/moi/produits",
             web::post().to(handlers::publish),
         )
@@ -38,6 +42,10 @@ pub fn configure_routes(cfg: &mut web::ServiceConfig) {
         .route(
             "/marchands/moi/produits",
             web::get().to(handlers::list_mine),
+        )
+        .route(
+            "/marchands/moi/produits/{id}",
+            web::patch().to(handlers::update_product),
         )
         .route(
             "/marchands/moi/produits/{id}/ecoule",

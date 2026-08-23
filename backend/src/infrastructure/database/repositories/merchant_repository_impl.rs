@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use uuid::Uuid;
 
-use crate::application::ports::{MerchantRepository, NewMerchant, RepoError};
+use crate::application::ports::{MerchantRepository, MerchantUpdate, NewMerchant, RepoError};
 use crate::domain::entities::Merchant;
 use crate::infrastructure::database::DbPool;
 
@@ -90,6 +90,20 @@ impl MerchantRepository for PostgresMerchantRepository {
         )
         .bind(id)
         .bind(logo_url)
+        .fetch_optional(&self.pool)
+        .await?
+        .ok_or(RepoError::NotFound)
+    }
+
+    async fn update(&self, id: Uuid, changes: MerchantUpdate) -> Result<Merchant, RepoError> {
+        sqlx::query_as::<_, Merchant>(
+            "UPDATE marchands SET nom = $2, adresse = $3, categorie = $4 WHERE id = $1
+             RETURNING id, nom, adresse, categorie, note, email, password_hash, latitude, longitude, logo_url, created_at",
+        )
+        .bind(id)
+        .bind(changes.nom)
+        .bind(changes.adresse)
+        .bind(changes.categorie)
         .fetch_optional(&self.pool)
         .await?
         .ok_or(RepoError::NotFound)

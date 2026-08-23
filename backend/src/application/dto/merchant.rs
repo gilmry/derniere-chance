@@ -1,8 +1,15 @@
 use rust_decimal::Decimal;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::domain::entities::Merchant;
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateMerchantDto {
+    pub nom: String,
+    pub adresse: String,
+    pub categorie: String,
+}
 
 #[derive(Debug, Serialize)]
 pub struct MerchantResponseDto {

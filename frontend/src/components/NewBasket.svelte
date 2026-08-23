@@ -1,10 +1,12 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { publishProduct, uploadProductPhoto, ApiError } from "../lib/api";
+  import { publishProduct, updateProduct, uploadProductPhoto, ApiError } from "../lib/api";
   import { getMerchantToken } from "../lib/auth";
 
   const RECREATE_KEY = "dc_recreate_product";
+  const EDIT_KEY = "dc_edit_product";
   let recreated = false;
+  let editingId: string | null = null;
 
   // Aperçu local instantané (blob) pendant l'upload ; remplacé par
   // uploadedPhotoUrl (URL publique MinIO) une fois l'upload terminé, envoyé
@@ -66,6 +68,12 @@
     return d.toISOString();
   }
 
+  // ISO UTC (venant d'un panier existant) -> "HH:MM" heure locale, pour préremplir le formulaire.
+  function isoToTime(iso: string): string {
+    const d = new Date(iso);
+    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  }
+
   async function publish(event: SubmitEvent) {
     event.preventDefault();
     const token = getMerchantToken();
@@ -81,23 +89,25 @@
     }
     error = "";
     loading = true;
+    const payload = {
+      nom,
+      description,
+      prix_initial: prixInitial,
+      prix_demarque: prixDemarque,
+      quantite: quantity,
+      retrait_debut: debut,
+      retrait_fin: fin,
+      photo_url: uploadedPhotoUrl,
+    };
     try {
-      await publishProduct(
-        {
-          nom,
-          description,
-          prix_initial: prixInitial,
-          prix_demarque: prixDemarque,
-          quantite: quantity,
-          retrait_debut: debut,
-          retrait_fin: fin,
-          photo_url: uploadedPhotoUrl,
-        },
-        token,
-      );
+      if (editingId) {
+        await updateProduct(editingId, payload, token);
+      } else {
+        await publishProduct(payload, token);
+      }
       window.location.href = "/pro/dashboard";
     } catch (err) {
-      error = err instanceof ApiError ? err.message : "La publication a échoué.";
+      error = err instanceof ApiError ? err.message : "L'enregistrement a échoué.";
     } finally {
       loading = false;
     }
@@ -109,6 +119,29 @@
   // Repris depuis "Recréer" sur un panier écoulé/expiré (MerchantDashboard) :
   // tout sauf la fenêtre de retrait, forcément passée, à resaisir.
   onMount(() => {
+    const editRaw = sessionStorage.getItem(EDIT_KEY);
+    if (editRaw) {
+      sessionStorage.removeItem(EDIT_KEY);
+      try {
+        const p = JSON.parse(editRaw);
+        editingId = p.id;
+        nom = p.nom ?? nom;
+        description = p.description ?? description;
+        prixInitial = p.prix_initial ?? prixInitial;
+        prixDemarque = p.prix_demarque ?? prixDemarque;
+        quantity = p.quantite ?? quantity;
+        if (p.retrait_debut) retraitDebut = isoToTime(p.retrait_debut);
+        if (p.retrait_fin) retraitFin = isoToTime(p.retrait_fin);
+        if (p.photo_url) {
+          photoPreview = p.photo_url;
+          uploadedPhotoUrl = p.photo_url;
+        }
+      } catch {
+        // sessionStorage corrompu ou format inattendu - formulaire vide, sans casse.
+      }
+      return;
+    }
+
     const raw = sessionStorage.getItem(RECREATE_KEY);
     if (!raw) return;
     sessionStorage.removeItem(RECREATE_KEY);
@@ -132,7 +165,7 @@
 
 <div class="screen">
   <div class="header">
-    <h1>Nouveau panier</h1>
+    <h1>{editingId ? "Modifier le panier" : "Nouveau panier"}</h1>
     <span class="time">{time}</span>
   </div>
 
@@ -196,7 +229,7 @@
 
     <div class="spacer"></div>
     <button class="btn btn-primary publish" type="submit" disabled={loading || uploadingPhoto}>
-      {loading ? "..." : uploadingPhoto ? "Envoi de la photo..." : "Publier maintenant"}
+      {loading ? "..." : uploadingPhoto ? "Envoi de la photo..." : editingId ? "Enregistrer" : "Publier maintenant"}
     </button>
   </form>
 </div>

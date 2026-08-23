@@ -1,6 +1,6 @@
 use actix_web::{web, HttpResponse};
 
-use crate::application::dto::{LoginRequest, RegisterMerchantRequest};
+use crate::application::dto::{LoginRequest, RegisterMerchantRequest, UpdateMerchantDto};
 use crate::application::use_cases::MerchantAuthError;
 use crate::infrastructure::web::app_state::AppState;
 use crate::infrastructure::web::handlers::responses::{
@@ -47,6 +47,25 @@ pub async fn me(state: web::Data<AppState>, merchant: AuthenticatedMerchant) -> 
         Err(MerchantAuthError::NotFound) => not_found("merchant not found"),
         Err(err) => {
             tracing::error!(?err, "merchant profile fetch failed");
+            internal_error()
+        }
+    }
+}
+
+pub async fn update_me(
+    state: web::Data<AppState>,
+    merchant: AuthenticatedMerchant,
+    dto: web::Json<UpdateMerchantDto>,
+) -> HttpResponse {
+    match state
+        .merchant_auth_use_cases
+        .update_profile(merchant.marchand_id, dto.into_inner())
+        .await
+    {
+        Ok(profile) => HttpResponse::Ok().json(profile),
+        Err(MerchantAuthError::NotFound) => not_found("merchant not found"),
+        Err(err) => {
+            tracing::error!(?err, "merchant profile update failed");
             internal_error()
         }
     }

@@ -19,6 +19,17 @@ pub struct NewProduct {
     pub photo_url: Option<String>,
 }
 
+pub struct ProductUpdate {
+    pub nom: String,
+    pub description: String,
+    pub prix_initial: Decimal,
+    pub prix_demarque: Decimal,
+    pub quantite: i32,
+    pub retrait_debut: DateTime<Utc>,
+    pub retrait_fin: DateTime<Utc>,
+    pub photo_url: Option<String>,
+}
+
 /// A produit flattened with its marchand's public info - the shape the
 /// catalogue (feed, offer detail, merchant page) reads, so a single query can
 /// serve it instead of an N+1 fetch per offer.
@@ -66,6 +77,9 @@ pub trait ProductRepository: Send + Sync {
         id: Uuid,
         statut: ProductStatus,
     ) -> Result<Product, RepoError>;
+    /// Édition marchand d'un panier existant (nom, prix, quantité, fenêtre de
+    /// retrait, photo) - ne touche pas au statut.
+    async fn update(&self, id: Uuid, changes: ProductUpdate) -> Result<Product, RepoError>;
     /// Atomically claims one unit for a reservation: decrements `quantite`
     /// and flips to `Ecoule` once it hits zero. Fails with `RepoError::NotFound`
     /// if the produit isn't `Publie` or has no stock left, so two concurrent

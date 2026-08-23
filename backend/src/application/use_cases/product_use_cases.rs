@@ -6,7 +6,7 @@ use uuid::Uuid;
 use crate::application::dto::{CreateProductDto, ProductResponseDto};
 use crate::application::ports::{
     EmailSender, MerchantRepository, NewNotification, NewProduct, NotificationRepository,
-    ProductRepository, RepoError, SubscriptionRepository,
+    ProductRepository, ProductUpdate, RepoError, SubscriptionRepository,
 };
 use crate::domain::entities::{NotificationStatus, ProductStatus};
 
@@ -50,11 +50,7 @@ impl ProductUseCases {
         }
     }
 
-    pub async fn publish(
-        &self,
-        marchand_id: Uuid,
-        dto: CreateProductDto,
-    ) -> Result<ProductResponseDto, ProductError> {
+    fn validate(dto: &CreateProductDto) -> Result<(), ProductError> {
         if dto.prix_demarque > dto.prix_initial {
             return Err(ProductError::InvalidInput(
                 "le prix démarqué doit être inférieur ou égal au prix initial".into(),
@@ -70,6 +66,15 @@ impl ProductUseCases {
                 "la fin du retrait doit être après le début".into(),
             ));
         }
+        Ok(())
+    }
+
+    pub async fn publish(
+        &self,
+        marchand_id: Uuid,
+        dto: CreateProductDto,
+    ) -> Result<ProductResponseDto, ProductError> {
+        Self::validate(&dto)?;
 
         let merchant = self
             .merchant_repo
@@ -149,6 +154,34 @@ impl ProductUseCases {
         let updated = self
             .product_repo
             .update_status(product.id, ProductStatus::Ecoule)
+            .await?;
+        Ok(updated.into())
+    }
+
+    pub async fn update(
+        &self,
+        marchand_id: Uuid,
+        product_id: Uuid,
+        dto: CreateProductDto,
+    ) -> Result<ProductResponseDto, ProductError> {
+        Self::validate(&dto)?;
+        self.owned_product(marchand_id, product_id).await?;
+
+        let updated = self
+            .product_repo
+            .update(
+                product_id,
+                ProductUpdate {
+                    nom: dto.nom,
+                    description: dto.description,
+                    prix_initial: dto.prix_initial,
+                    prix_demarque: dto.prix_demarque,
+                    quantite: dto.quantite,
+                    retrait_debut: dto.retrait_debut,
+                    retrait_fin: dto.retrait_fin,
+                    photo_url: dto.photo_url,
+                },
+            )
             .await?;
         Ok(updated.into())
     }

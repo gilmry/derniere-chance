@@ -8,8 +8,11 @@ use uuid::Uuid;
 
 use crate::application::dto::{
     AuthResponse, Claims, LoginRequest, MerchantResponseDto, RegisterMerchantRequest,
+    UpdateMerchantDto,
 };
-use crate::application::ports::{EventNotifier, MerchantRepository, NewMerchant, RepoError};
+use crate::application::ports::{
+    EventNotifier, MerchantRepository, MerchantUpdate, NewMerchant, RepoError,
+};
 use crate::domain::entities::Merchant;
 
 #[derive(Debug, Error)]
@@ -144,6 +147,25 @@ impl MerchantAuthUseCases {
             .find_by_id(marchand_id)
             .await?
             .ok_or(MerchantAuthError::NotFound)?;
+        Ok(merchant.into())
+    }
+
+    pub async fn update_profile(
+        &self,
+        marchand_id: Uuid,
+        dto: UpdateMerchantDto,
+    ) -> Result<MerchantResponseDto, MerchantAuthError> {
+        let merchant = self
+            .merchant_repo
+            .update(
+                marchand_id,
+                MerchantUpdate {
+                    nom: dto.nom,
+                    adresse: dto.adresse,
+                    categorie: dto.categorie,
+                },
+            )
+            .await?;
         Ok(merchant.into())
     }
 

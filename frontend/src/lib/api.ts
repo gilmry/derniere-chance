@@ -198,6 +198,13 @@ export function getMyMerchantProfile(token: string): Promise<Merchant> {
   return apiFetch("/marchands/moi", { token });
 }
 
+export function updateMerchantProfile(
+  dto: { nom: string; adresse: string; categorie: string },
+  token: string,
+): Promise<Merchant> {
+  return apiFetch("/marchands/moi", { method: "PATCH", body: dto, token });
+}
+
 // --- Auth consommateur ---
 
 export function consumerRegister(email: string, password: string): Promise<AuthResponse> {
@@ -254,6 +261,23 @@ export function publishProduct(
   token: string,
 ): Promise<Product> {
   return apiFetch("/marchands/moi/produits", { method: "POST", body: dto, token });
+}
+
+export function updateProduct(
+  id: string,
+  dto: {
+    nom: string;
+    description: string;
+    prix_initial: string;
+    prix_demarque: string;
+    quantite: number;
+    retrait_debut: string;
+    retrait_fin: string;
+    photo_url?: string | null;
+  },
+  token: string,
+): Promise<Product> {
+  return apiFetch(`/marchands/moi/produits/${id}`, { method: "PATCH", body: dto, token });
 }
 
 /// Upload une photo de panier, renvoie son URL publique à passer ensuite à

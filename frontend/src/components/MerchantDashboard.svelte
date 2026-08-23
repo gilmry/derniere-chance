@@ -7,9 +7,11 @@
     markEcoule,
     validatePickup,
     getMyMerchantProfile,
+    updateMerchantProfile,
     uploadMerchantLogo,
     formatPrice,
     ApiError,
+    MERCHANT_CATEGORIES,
     type MerchantDashboard,
     type Product,
     type Merchant,
@@ -43,6 +45,41 @@
       logoError = err instanceof ApiError ? err.message : "L'envoi du logo a échoué.";
     } finally {
       uploadingLogo = false;
+    }
+  }
+
+  let editingProfile = false;
+  let profileNom = "";
+  let profileAdresse = "";
+  let profileCategorie = "";
+  let profileSaving = false;
+  let profileError = "";
+
+  function startEditProfile() {
+    if (!merchant) return;
+    profileNom = merchant.nom;
+    profileAdresse = merchant.adresse;
+    profileCategorie = merchant.categorie;
+    profileError = "";
+    editingProfile = true;
+  }
+
+  async function saveProfile(event: SubmitEvent) {
+    event.preventDefault();
+    const token = getMerchantToken();
+    if (!token) return;
+    profileSaving = true;
+    profileError = "";
+    try {
+      merchant = await updateMerchantProfile(
+        { nom: profileNom, adresse: profileAdresse, categorie: profileCategorie },
+        token,
+      );
+      editingProfile = false;
+    } catch (err) {
+      profileError = err instanceof ApiError ? err.message : "La mise à jour a échoué.";
+    } finally {
+      profileSaving = false;
     }
   }
 
@@ -111,6 +148,24 @@
     window.location.href = "/pro/panier/nouveau";
   }
 
+  function editProduct(product: Product) {
+    sessionStorage.setItem(
+      "dc_edit_product",
+      JSON.stringify({
+        id: product.id,
+        nom: product.nom,
+        description: product.description,
+        prix_initial: product.prix_initial,
+        prix_demarque: product.prix_demarque,
+        quantite: product.quantite,
+        retrait_debut: product.retrait_debut,
+        retrait_fin: product.retrait_fin,
+        photo_url: product.photo_url,
+      }),
+    );
+    window.location.href = "/pro/panier/nouveau";
+  }
+
   async function ecoule(id: string) {
     const token = getMerchantToken();
     if (!token) return;
@@ -128,7 +183,7 @@
     <h1>Aujourd'hui</h1>
     {#if !loading && !loadError}
       <button class="logo-btn" on:click={() => logoFileInput.click()} type="button" aria-label="Changer le logo">
-        <Photo shape="circle" label={merchant?.nom ?? "Logo"} src={logoPreview ?? merchant?.logo_url} />
+        <Photo shape="circle" label="Logo" src={logoPreview ?? merchant?.logo_url} />
         {#if uploadingLogo}<span class="logo-spinner">...</span>{/if}
       </button>
       <input
@@ -147,6 +202,32 @@
   {:else if loadError}
     <p class="state error">{loadError}</p>
   {:else}
+    {#if editingProfile}
+      <form class="card profile-edit" on:submit={saveProfile}>
+        <input class="text-input" bind:value={profileNom} placeholder="Nom du commerce" required />
+        <input class="text-input" bind:value={profileAdresse} placeholder="Adresse" required />
+        <select class="text-input" bind:value={profileCategorie} required>
+          {#each Object.entries(MERCHANT_CATEGORIES) as [cat, emoji]}
+            <option value={cat}>{emoji} {cat}</option>
+          {/each}
+        </select>
+        {#if profileError}<p class="pickup-result error">{profileError}</p>{/if}
+        <div class="profile-edit-actions">
+          <button class="btn btn-secondary" type="button" on:click={() => (editingProfile = false)}>Annuler</button>
+          <button class="btn btn-primary" type="submit" disabled={profileSaving}>
+            {profileSaving ? "..." : "Enregistrer"}
+          </button>
+        </div>
+      </form>
+    {:else if merchant}
+      <div class="fiche-row">
+        <div class="fiche-info">
+          <div class="fiche-nom">{merchant.nom}</div>
+          <div class="fiche-detail">{merchant.categorie} · {merchant.adresse}</div>
+        </div>
+        <button class="edit-link" type="button" on:click={startEditProfile}>Modifier</button>
+      </div>
+    {/if}
     <form class="pickup-check" on:submit={checkPickupCode}>
       <input
         class="pickup-input"
@@ -192,7 +273,10 @@
             </div>
           </div>
           {#if product.statut === "publie"}
-            <button class="mark-btn" on:click={() => ecoule(product.id)}>Marquer écoulé</button>
+            <div class="row-actions">
+              <button class="mark-btn" on:click={() => ecoule(product.id)}>Marquer écoulé</button>
+              <button class="mark-btn secondary" on:click={() => editProduct(product)}>Modifier</button>
+            </div>
           {:else}
             <div class="row-actions">
               <span class="status-badge exhausted">
@@ -270,6 +354,69 @@
 
   .state.error {
     color: #c0392b;
+  }
+
+  .fiche-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .fiche-info {
+    min-width: 0;
+  }
+
+  .fiche-nom {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .fiche-detail {
+    font-size: 12px;
+    color: var(--color-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .edit-link {
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--color-primary);
+    background: none;
+    border: none;
+    padding: 4px;
+  }
+
+  .profile-edit {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .profile-edit .text-input {
+    height: 46px;
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    padding: 0 14px;
+    font-size: 14px;
+    font-family: var(--font-body);
+  }
+
+  .profile-edit-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .profile-edit-actions .btn {
+    flex: 1;
+    height: 44px;
   }
 
   .pickup-check {
@@ -422,5 +569,10 @@
     border-radius: 10px;
     padding: 6px 10px;
     flex-shrink: 0;
+  }
+
+  .mark-btn.secondary {
+    color: var(--color-muted);
+    border-color: var(--color-border);
   }
 </style>

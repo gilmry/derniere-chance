@@ -1,7 +1,9 @@
 use async_trait::async_trait;
 use uuid::Uuid;
 
-use crate::application::ports::{NewProduct, ProductRepository, ProductWithMerchant, RepoError};
+use crate::application::ports::{
+    NewProduct, ProductRepository, ProductUpdate, ProductWithMerchant, RepoError,
+};
 use crate::domain::entities::{Product, ProductStatus};
 use crate::infrastructure::database::DbPool;
 
@@ -140,6 +142,27 @@ impl ProductRepository for PostgresProductRepository {
         sqlx::query_as::<_, Product>(&query)
             .bind(id)
             .bind(statut)
+            .fetch_optional(&self.pool)
+            .await?
+            .ok_or(RepoError::NotFound)
+    }
+
+    async fn update(&self, id: Uuid, changes: ProductUpdate) -> Result<Product, RepoError> {
+        let query = format!(
+            "UPDATE produits SET nom = $2, description = $3, prix_initial = $4, \
+             prix_demarque = $5, quantite = $6, retrait_debut = $7, retrait_fin = $8, \
+             photo_url = $9 WHERE id = $1 RETURNING {PRODUCT_COLUMNS}"
+        );
+        sqlx::query_as::<_, Product>(&query)
+            .bind(id)
+            .bind(changes.nom)
+            .bind(changes.description)
+            .bind(changes.prix_initial)
+            .bind(changes.prix_demarque)
+            .bind(changes.quantite)
+            .bind(changes.retrait_debut)
+            .bind(changes.retrait_fin)
+            .bind(changes.photo_url)
             .fetch_optional(&self.pool)
             .await?
             .ok_or(RepoError::NotFound)
