@@ -47,7 +47,12 @@ services:
   # one vCPU shared with Elevia, and a busy feed can mean dozens of image
   # requests per pageview. Only uploads (rare, small, auth-gated) go through
   # the backend, which writes here. ---
-  minio:
+  # Nom de service long, et non `minio` : ce conteneur est attache au reseau
+  # partage ecosolva-web, ou Docker Compose publie TOUJOURS le nom du service
+  # comme alias DNS, sans moyen de le retirer. L'alias court `minio` y captait
+  # les appels de koprogo et de taginy, qui atterrissaient ici avec leurs
+  # propres credentials. Le nom long est unique sur le reseau partage.
+  derniere-chance-minio:
     image: minio/minio:latest
     container_name: derniere-chance-minio
     restart: unless-stopped
@@ -83,7 +88,7 @@ services:
     image: minio/mc:latest
     container_name: derniere-chance-minio-bootstrap
     depends_on:
-      minio:
+      derniere-chance-minio:
         condition: service_healthy
     environment:
       S3_BUCKET: ${S3_BUCKET:-photos}
@@ -99,7 +104,7 @@ services:
     command:
       - >
         set -e;
-        until mc alias set local http://minio:9000 "$${S3_ACCESS_KEY}" "$${S3_SECRET_KEY}"; do
+        until mc alias set local http://derniere-chance-minio:9000 "$${S3_ACCESS_KEY}" "$${S3_SECRET_KEY}"; do
           echo "Waiting for MinIO...";
           sleep 2;
         done;
@@ -122,7 +127,7 @@ services:
       SERVER_PORT: 8080
       RUST_LOG: ${RUST_LOG:-info}
       S3_BUCKET: ${S3_BUCKET:-photos}
-      S3_ENDPOINT: http://minio:9000
+      S3_ENDPOINT: http://derniere-chance-minio:9000
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
       S3_PUBLIC_URL: https://${API_DOMAIN:-api.derniere-chance.ecosolva.org}/photos
@@ -135,7 +140,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      minio:
+      derniere-chance-minio:
         condition: service_healthy
     networks:
       - derniere-chance-network
@@ -163,7 +168,7 @@ services:
       RUST_LOG: debug
       RUST_BACKTRACE: "1"
       S3_BUCKET: ${S3_BUCKET:-photos}
-      S3_ENDPOINT: http://minio:9000
+      S3_ENDPOINT: http://derniere-chance-minio:9000
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
       S3_PUBLIC_URL: http://localhost:9000/${S3_BUCKET:-photos}
@@ -179,7 +184,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      minio:
+      derniere-chance-minio:
         condition: service_healthy
     networks:
       - derniere-chance-network
