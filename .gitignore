@@ -10,6 +10,7 @@
 
 # Local docker-compose env (root)
 /.env
+/.env.bak*
 
 # E2E (Playwright)
 /e2e/node_modules
