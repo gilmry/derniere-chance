@@ -19,7 +19,27 @@ LOG_FILE="$REPO_DIR/deploy.log"
 LOCK_FILE="$REPO_DIR/.deploy.lock"
 DEPLOYED_REV_FILE="$REPO_DIR/.deployed_rev"
 
+# Images GHCR à épingler. La CI les publie sous `sha-<court>` en plus de
+# `latest` (voir .github/workflows/docker-publish.yml).
+IMAGE_REPO="${IMAGE_REPO:-ghcr.io/gilmry/derniere-chance}"
+IMAGE_SERVICES="backend frontend"
+
 log() { echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] $*" >> "$LOG_FILE"; }
+
+# Vraie ou fausse selon que le tag existe dans le registre, sans le tirer.
+image_published() {
+  docker manifest inspect "$1" >/dev/null 2>&1
+}
+
+# Exporte BACKEND_IMAGE / FRONTEND_IMAGE épinglés au tag donné, pour que
+# `docker compose` résolve des images précises et non un `latest` mouvant.
+pin_images() {
+  local tag="$1" service var
+  for service in $IMAGE_SERVICES; do
+    var="$(echo "$service" | tr '[:lower:]' '[:upper:]')_IMAGE"
+    export "$var=$IMAGE_REPO/$service:$tag"
+  done
+}
 
 run_deploy() {
   cd "$REPO_DIR"
@@ -60,10 +80,35 @@ run_deploy() {
     exit 0
   fi
 
+  local target_tag="sha-$(printf %s "$remote_rev" | cut -c1-7)"
+
+  # ATTENDRE que TOUTES les images du commit visé soient publiées.
+  #
+  # Sans ce contrôle, le déploiement tirait `latest`, qui n'est publié qu'à la
+  # fin de chaque job de build. Quand le front et le back finissent à quelques
+  # minutes d'écart, un tic de cron tombant entre les deux déployait un
+  # `latest` moitié neuf moitié vieux, puis inscrivait le commit comme
+  # déployé : plus aucun tic ultérieur ne rattrapait l'écart. C'est arrivé
+  # deux fois le 2026-08-30, dont une en laissant tourner un frontend qui
+  # appelait des routes absentes du backend.
+  #
+  # On sort en 0 et non en erreur : la CI n'a simplement pas fini, le
+  # prochain tic réessaiera. Ce n'est pas une panne.
+  local service missing=""
+  for service in $IMAGE_SERVICES; do
+    image_published "$IMAGE_REPO/$service:$target_tag" || missing="$missing $service"
+  done
+  if [ -n "$missing" ]; then
+    if [ "$deployed_rev" != "$remote_rev" ]; then
+      log "images $target_tag pas encore publiées ($(echo $missing)), attente du prochain tic"
+    fi
+    exit 0
+  fi
+
   if [ "$local_rev" = "$remote_rev" ]; then
-    log "prod non déployée sur $remote_rev, déploiement"
+    log "prod non déployée sur $remote_rev, déploiement de $target_tag"
   else
-    log "nouveau commit sur main ($local_rev -> $remote_rev), déploiement"
+    log "nouveau commit sur main ($local_rev -> $remote_rev), déploiement de $target_tag"
   fi
 
   if ! git checkout main --quiet || ! git merge --ff-only origin/main --quiet; then
@@ -71,18 +116,58 @@ run_deploy() {
     exit 1
   fi
 
+  pin_images "$target_tag"
+
   if ! docker compose --profile prod pull >> "$LOG_FILE" 2>&1; then
-    log "échec du pull des images GHCR ($remote_rev), voir logs ci-dessus - nouvelle tentative au prochain tick"
+    log "échec du pull de $target_tag, nouvelle tentative au prochain tic"
     exit 1
   fi
 
   if docker compose --profile prod up -d --remove-orphans >> "$LOG_FILE" 2>&1; then
-    log "déploiement réussi ($remote_rev)"
+    log "déploiement réussi ($remote_rev, images $target_tag)"
     echo "$remote_rev" > "$DEPLOYED_REV_FILE"
     docker image prune -f >> "$LOG_FILE" 2>&1
+    exit 0
+  fi
+
+  log "ÉCHEC du déploiement de $target_tag ($remote_rev)"
+  rollback "$deployed_rev"
+  exit 1
+}
+
+# Remet la version précédente en service. Sans cela, un `up -d` à moitié
+# appliqué laisse la prod dans un état mixte jusqu'à intervention manuelle -
+# le pire des deux mondes, puisque les conteneurs répondent mais ne
+# s'accordent pas.
+rollback() {
+  local previous_rev="$1"
+
+  if [ -z "$previous_rev" ]; then
+    log "ROLLBACK impossible : aucune version précédente connue, intervention manuelle requise"
+    return
+  fi
+
+  local previous_tag="sha-$(printf %s "$previous_rev" | cut -c1-7)"
+  local service
+  for service in $IMAGE_SERVICES; do
+    if ! image_published "$IMAGE_REPO/$service:$previous_tag"; then
+      log "ROLLBACK impossible : image $service:$previous_tag absente du registre, intervention manuelle requise"
+      return
+    fi
+  done
+
+  log "ROLLBACK vers $previous_tag ($previous_rev)"
+  pin_images "$previous_tag"
+
+  # Le dépôt est déjà passé sur le nouveau commit ; on ne le rembobine pas.
+  # Seules les images comptent pour ce qui tourne, et `.deployed_rev` est
+  # remis à la version réellement en service pour que le prochain tic
+  # retente le déploiement plutôt que de croire le travail fait.
+  if docker compose --profile prod up -d --remove-orphans >> "$LOG_FILE" 2>&1; then
+    echo "$previous_rev" > "$DEPLOYED_REV_FILE"
+    log "ROLLBACK réussi, la prod tourne sur $previous_tag"
   else
-    log "échec du déploiement ($remote_rev), voir logs ci-dessus - nouvelle tentative au prochain tick"
-    exit 1
+    log "ROLLBACK ÉCHOUÉ, la prod est dans un état incertain, intervention manuelle requise"
   fi
 }
 

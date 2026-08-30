@@ -16,7 +16,10 @@ Voir [`VISION.md`](./VISION.md) pour le produit en détail.
   consommateur → admin, contre la stack Docker réelle.
 - **Infra** : Docker Compose (profils `dev`/`prod`), images construites en CI
   (GitHub Actions → GHCR), déploiement GitOps par cron sur le serveur cible
-  (voir [`deploy.sh`](./deploy.sh)).
+  (voir [`deploy.sh`](./deploy.sh)). Le déploiement est **épinglé au hash du
+  commit** : il attend que toutes les images `sha-<court>` soient publiées
+  avant de démarrer, et revient à la version précédente si le démarrage
+  échoue.
 - **RGPD** : consentement explicite tracé pour le programme bêta, retrait en
   un clic avec anonymisation du compte, rétention des journaux bornée à
   30 jours (voir [`docs/rgpd/`](./docs/rgpd/)).
