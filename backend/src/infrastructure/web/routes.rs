@@ -74,7 +74,21 @@ pub fn configure_routes(cfg: &mut web::ServiceConfig) {
             "/marchands/moi/reservations/{code}/valider",
             web::post().to(handlers::validate_pickup),
         )
-        // Consommateur account (auth: consommateur)
+        // Consentement au programme bêta (auth: consommateur, PAS de portier
+        // de consentement - c'est ici qu'on le donne ou le retire).
+        .route(
+            "/consommateurs/moi/consentement",
+            web::get().to(handlers::consent::status),
+        )
+        .route(
+            "/consommateurs/moi/consentement",
+            web::post().to(handlers::consent::grant),
+        )
+        .route(
+            "/consommateurs/moi/consentement",
+            web::delete().to(handlers::consent::withdraw),
+        )
+        // Consommateur account (auth: consommateur + consentement bêta)
         .route(
             "/consommateurs/moi/abonnements",
             web::get().to(handlers::list_followed),

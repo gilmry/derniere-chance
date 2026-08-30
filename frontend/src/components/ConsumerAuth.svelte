@@ -15,12 +15,20 @@
 
   let email = "";
   let password = "";
+  // Jamais pré-cochée : le consentement doit être un acte positif (RGPD
+  // art. 4 §11). L'attribut `required` sur la case empêche la soumission
+  // tant qu'elle ne l'est pas, et le backend revérifie de son côté.
+  let consent = false;
   let error = "";
   let loading = false;
 
   async function submit(event: SubmitEvent) {
     event.preventDefault();
     error = "";
+    if (mode === "register" && !consent) {
+      error = "Il faut accepter de participer au programme bêta pour créer un compte.";
+      return;
+    }
     loading = true;
     try {
       const auth = mode === "register"
@@ -43,6 +51,16 @@
     <form class="fields" on:submit={submit}>
       <input placeholder="Email" type="email" bind:value={email} required />
       <input placeholder="Mot de passe" type="password" bind:value={password} required minlength="8" />
+      {#if mode === "register"}
+        <label class="consent">
+          <input type="checkbox" bind:checked={consent} required />
+          <span>
+            J'accepte de participer au programme bêta et la collecte de mes données
+            telles que décrites dans la
+            <a href="/confidentialite" target="_blank" rel="noopener">politique de confidentialité</a>.
+          </span>
+        </label>
+      {/if}
       {#if error}<p class="error">{error}</p>{/if}
       <button class="btn btn-primary" type="submit" disabled={loading}>
         {loading ? "..." : mode === "register" ? "Créer mon compte" : "Se connecter"}
@@ -87,6 +105,29 @@
     padding: 0 16px;
     font-size: 14px;
     font-family: var(--font-body);
+  }
+
+  .consent {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-muted);
+    padding: 2px;
+  }
+
+  .consent input {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    margin-top: 1px;
+    accent-color: var(--color-primary);
+  }
+
+  .consent a {
+    color: var(--color-primary);
+    font-weight: 600;
   }
 
   .error {

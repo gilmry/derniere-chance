@@ -4,11 +4,11 @@ use uuid::Uuid;
 use crate::application::use_cases::ReservationError;
 use crate::infrastructure::web::app_state::AppState;
 use crate::infrastructure::web::handlers::responses::{conflict, forbidden, internal_error, not_found};
-use crate::infrastructure::web::middleware::{AuthenticatedConsumer, AuthenticatedMerchant};
+use crate::infrastructure::web::middleware::{AuthenticatedMerchant, ConsentedConsumer};
 
 pub async fn reserve(
     state: web::Data<AppState>,
-    consumer: AuthenticatedConsumer,
+    consumer: ConsentedConsumer,
     path: web::Path<Uuid>,
 ) -> HttpResponse {
     match state
@@ -51,7 +51,7 @@ pub async fn validate_pickup(
 
 pub async fn list_my_reservations(
     state: web::Data<AppState>,
-    consumer: AuthenticatedConsumer,
+    consumer: ConsentedConsumer,
 ) -> HttpResponse {
     match state
         .reservation_use_cases

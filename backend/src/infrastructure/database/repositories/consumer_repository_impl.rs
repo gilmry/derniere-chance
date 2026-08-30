@@ -20,7 +20,7 @@ impl ConsumerRepository for PostgresConsumerRepository {
     async fn create(&self, new: NewConsumer) -> Result<Consumer, RepoError> {
         sqlx::query_as::<_, Consumer>(
             "INSERT INTO consommateurs (email, password_hash) VALUES ($1, $2)
-             RETURNING id, email, password_hash, created_at",
+             RETURNING id, email, password_hash, created_at, anonymise_le",
         )
         .bind(new.email)
         .bind(new.password_hash)
@@ -31,7 +31,7 @@ impl ConsumerRepository for PostgresConsumerRepository {
 
     async fn find_by_email(&self, email: &str) -> Result<Option<Consumer>, RepoError> {
         sqlx::query_as::<_, Consumer>(
-            "SELECT id, email, password_hash, created_at FROM consommateurs WHERE email = $1",
+            "SELECT id, email, password_hash, created_at, anonymise_le FROM consommateurs WHERE email = $1",
         )
         .bind(email)
         .fetch_optional(&self.pool)
@@ -41,7 +41,7 @@ impl ConsumerRepository for PostgresConsumerRepository {
 
     async fn find_by_id(&self, id: Uuid) -> Result<Option<Consumer>, RepoError> {
         sqlx::query_as::<_, Consumer>(
-            "SELECT id, email, password_hash, created_at FROM consommateurs WHERE id = $1",
+            "SELECT id, email, password_hash, created_at, anonymise_le FROM consommateurs WHERE id = $1",
         )
         .bind(id)
         .fetch_optional(&self.pool)
@@ -51,7 +51,7 @@ impl ConsumerRepository for PostgresConsumerRepository {
 
     async fn list_all(&self) -> Result<Vec<Consumer>, RepoError> {
         sqlx::query_as::<_, Consumer>(
-            "SELECT id, email, password_hash, created_at FROM consommateurs ORDER BY created_at DESC",
+            "SELECT id, email, password_hash, created_at, anonymise_le FROM consommateurs ORDER BY created_at DESC",
         )
         .fetch_all(&self.pool)
         .await
@@ -65,6 +65,27 @@ impl ConsumerRepository for PostgresConsumerRepository {
             .await
             .map(|_| ())
             .map_err(Into::into)
+    }
+
+    async fn anonymize(&self, id: Uuid) -> Result<(), RepoError> {
+        // L'email est dérivé de l'UUID, qui est déjà la clé primaire : il ne
+        // révèle donc rien de plus que ce que la ligne portait déjà, tout en
+        // respectant la contrainte UNIQUE. Le hash est vidé pour que
+        // `bcrypt::verify` échoue systématiquement, ce qui rend toute
+        // reconnexion impossible. COALESCE garde la date du premier retrait
+        // si l'opération est rejouée.
+        sqlx::query(
+            "UPDATE consommateurs
+                SET email = 'anonyme-' || id::text || '@invalid',
+                    password_hash = '',
+                    anonymise_le = COALESCE(anonymise_le, now())
+              WHERE id = $1",
+        )
+        .bind(id)
+        .execute(&self.pool)
+        .await
+        .map(|_| ())
+        .map_err(Into::into)
     }
 
     async fn count(&self) -> Result<i64, RepoError> {

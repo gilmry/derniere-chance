@@ -1,0 +1,44 @@
+# Rétention des journaux - DernièreChance (RGPD)
+#
+# Généré par infra/log-retention/install.sh : ne pas éditer sur le serveur,
+# modifier le gabarit dans le dépôt puis relancer l'installation.
+#
+# Ce fichier ne couvre QUE les journaux qu'aucun autre fichier de
+# /etc/logrotate.d ne réclame déjà - deux stanzas pour le même chemin font
+# échouer logrotate ("duplicate log entry"). L'installation vérifie la
+# couverture existante et retire les blocs redondants.
+#
+# Plafond commun : 30 jours. Voir docs/rgpd/registre-traitements.md.
+
+# --- CrowdSec (détection comportementale) ---
+/var/log/crowdsec.log /var/log/crowdsec_api.log {
+    daily
+    rotate 30
+    maxage 30
+    missingok
+    notifempty
+    compress
+    delaycompress
+    create 0640 root adm
+    sharedscripts
+    postrotate
+        systemctl reload crowdsec >/dev/null 2>&1 || true
+    endscript
+}
+
+# --- Journal de déploiement GitOps (deploy.sh) ---
+# Chemin réécrit à l'installation avec le répertoire réel du dépôt.
+@DEPLOY_LOG@ {
+    weekly
+    rotate 4
+    maxage 30
+    missingok
+    notifempty
+    compress
+    delaycompress
+    # copytruncate : deploy.sh garde le fichier ouvert entre deux ticks cron,
+    # le renommer lui ferait écrire dans le fichier tourné. `create` serait
+    # sans effet ici, logrotate ne recrée rien dans ce mode.
+    copytruncate
+    su @DEPLOY_USER@ @DEPLOY_USER@
+}

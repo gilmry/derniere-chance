@@ -5,16 +5,17 @@ use actix_web::{web, App, HttpServer};
 
 use derniere_chance_api::application::ports::{EmailSender, EventNotifier};
 use derniere_chance_api::application::use_cases::{
-    AdminAuthUseCases, AdminUseCases, CatalogUseCases, ConsumerAuthUseCases, DashboardUseCases,
-    MerchantAuthUseCases, OAuthUseCases, ProductUseCases, ReservationUseCases,
+    AdminAuthUseCases, AdminUseCases, CatalogUseCases, ConsentUseCases, ConsumerAuthUseCases,
+    DashboardUseCases, MerchantAuthUseCases, OAuthUseCases, ProductUseCases, ReservationUseCases,
     SubscriptionUseCases,
 };
 use derniere_chance_api::infrastructure::bootstrap::bootstrap_admin;
 use derniere_chance_api::infrastructure::database::create_pool;
 use derniere_chance_api::infrastructure::database::repositories::{
-    PostgresAdminRepository, PostgresAuthorizationCodeRepository, PostgresConsumerRepository,
-    PostgresMerchantRepository, PostgresNotificationRepository, PostgresOAuthClientRepository,
-    PostgresProductRepository, PostgresRefreshTokenRepository, PostgresReservationRepository,
+    PostgresAdminRepository, PostgresAuthorizationCodeRepository, PostgresConsentRepository,
+    PostgresConsumerRepository, PostgresMerchantRepository, PostgresNotificationRepository,
+    PostgresOAuthClientRepository, PostgresProductRepository, PostgresRefreshTokenRepository,
+    PostgresReservationRepository,
     PostgresSubscriptionRepository,
 };
 use derniere_chance_api::infrastructure::email::LoggingEmailSender;
@@ -55,6 +56,7 @@ async fn main() -> std::io::Result<()> {
     let reservation_repo = Arc::new(PostgresReservationRepository::new(db.clone()));
     let notification_repo = Arc::new(PostgresNotificationRepository::new(db.clone()));
     let admin_repo = Arc::new(PostgresAdminRepository::new(db.clone()));
+    let consent_repo = Arc::new(PostgresConsentRepository::new(db.clone()));
     let oauth_client_repo = Arc::new(PostgresOAuthClientRepository::new(db.clone()));
     let oauth_code_repo = Arc::new(PostgresAuthorizationCodeRepository::new(db.clone()));
     let oauth_refresh_repo = Arc::new(PostgresRefreshTokenRepository::new(db.clone()));
@@ -88,10 +90,12 @@ async fn main() -> std::io::Result<()> {
         merchant_auth_use_cases: merchant_auth_use_cases.clone(),
         consumer_auth_use_cases: Arc::new(ConsumerAuthUseCases::new(
             consumer_repo.clone(),
+            consent_repo.clone(),
             jwt_secret.clone(),
             event_notifier.clone(),
         )),
         admin_auth_use_cases: Arc::new(AdminAuthUseCases::new(admin_repo, jwt_secret)),
+        consent_use_cases: Arc::new(ConsentUseCases::new(consent_repo, consumer_repo.clone())),
         admin_use_cases,
         catalog_use_cases: Arc::new(CatalogUseCases::new(
             product_repo.clone(),

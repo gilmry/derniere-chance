@@ -50,6 +50,11 @@ test("marchand publie, consommateur réserve, marchand valide, admin nettoie", a
     await page.goto("/compte");
     await page.getByPlaceholder("Email").fill(CONSUMER_EMAIL);
     await page.getByPlaceholder("Mot de passe").fill(PASSWORD);
+    // Consentement bêta : case obligatoire et jamais pré-cochée, sans quoi
+    // le backend refuse l'inscription (voir docs/rgpd/registre-traitements.md).
+    const consent = page.getByRole("checkbox");
+    await expect(consent).not.toBeChecked();
+    await consent.check();
     await page.getByRole("button", { name: "Créer mon compte" }).click();
     await page.waitForURL("**/feed");
   });

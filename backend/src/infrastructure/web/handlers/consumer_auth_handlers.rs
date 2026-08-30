@@ -12,6 +12,9 @@ pub async fn register(
     match state.consumer_auth_use_cases.register(dto.into_inner()).await {
         Ok(response) => HttpResponse::Created().json(response),
         Err(ConsumerAuthError::EmailTaken) => conflict("an account already exists for this email"),
+        Err(ConsumerAuthError::StaleConsentVersion) => conflict(
+            "la politique de confidentialité a changé, recharge la page avant de t'inscrire",
+        ),
         Err(err) => {
             tracing::error!(?err, "consumer register failed");
             internal_error()

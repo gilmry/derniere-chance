@@ -2,6 +2,7 @@
 // mock.ts au fur et à mesure du branchement (voir VISION.md).
 
 import type { Coords } from "./geoloc";
+import { BETA_CONSENT_VERSION, redirectToConsent } from "./consent";
 
 const API_URL = import.meta.env.PUBLIC_API_URL ?? "http://localhost:8080";
 
@@ -21,6 +22,14 @@ export class ApiError extends Error {
   constructor(status: number, message: string) {
     super(message);
     this.status = status;
+  }
+}
+
+/// Le backend a refusé l'appel faute de consentement bêta à jour (case
+/// jamais cochée, ou consentement retiré depuis).
+export class ConsentRequiredError extends ApiError {
+  constructor(message: string) {
+    super(403, message);
   }
 }
 
@@ -47,6 +56,18 @@ async function apiFetch<T>(
     const message = (data && typeof data === "object" && "error" in data)
       ? String((data as { error: unknown }).error)
       : `Erreur ${res.status}`;
+
+    // Tous les appels consommateur passent par ici : un seul endroit pour
+    // rebasculer vers l'écran de consentement, plutôt que la même garde
+    // recopiée dans chaque composant.
+    const code = (data && typeof data === "object" && "code" in data)
+      ? String((data as { code: unknown }).code)
+      : undefined;
+    if (res.status === 403 && code === "consentement_requis") {
+      redirectToConsent();
+      throw new ConsentRequiredError(message);
+    }
+
     throw new ApiError(res.status, message);
   }
 
@@ -207,12 +228,46 @@ export function updateMerchantProfile(
 
 // --- Auth consommateur ---
 
+/// L'inscription porte le consentement bêta : le backend refuse la requête
+/// si la version envoyée n'est pas celle en vigueur, donc aucun compte ne
+/// peut naître sans consentement explicite et daté.
 export function consumerRegister(email: string, password: string): Promise<AuthResponse> {
-  return apiFetch("/consommateurs/inscription", { method: "POST", body: { email, password } });
+  return apiFetch("/consommateurs/inscription", {
+    method: "POST",
+    body: { email, password, consent_version: BETA_CONSENT_VERSION },
+  });
 }
 
 export function consumerLogin(email: string, password: string): Promise<AuthResponse> {
   return apiFetch("/consommateurs/connexion", { method: "POST", body: { email, password } });
+}
+
+// --- Consentement au programme bêta (auth: consommateur) ---
+
+export interface ConsentStatus {
+  /// Vrai seulement si le consentement porte sur `version_courante`.
+  consenti: boolean;
+  version_acceptee: string | null;
+  accepte_le: string | null;
+  version_courante: string;
+}
+
+export function consentStatus(token: string): Promise<ConsentStatus> {
+  return apiFetch("/consommateurs/moi/consentement", { token });
+}
+
+export function grantConsent(token: string): Promise<ConsentStatus> {
+  return apiFetch("/consommateurs/moi/consentement", {
+    method: "POST",
+    body: { consent_version: BETA_CONSENT_VERSION },
+    token,
+  });
+}
+
+/// Retire le consentement et anonymise le compte côté serveur. Le jeton
+/// local devient inutilisable : l'appelant doit le purger.
+export function withdrawConsent(token: string): Promise<void> {
+  return apiFetch("/consommateurs/moi/consentement", { method: "DELETE", token });
 }
 
 // --- Actions consommateur (auth requise) ---
@@ -359,6 +414,9 @@ export interface AdminConsumer {
   id: string;
   email: string;
   created_at: string;
+  /// Renseigné après retrait du consentement bêta : `email` n'est alors
+  /// plus qu'un identifiant technique.
+  anonymise_le: string | null;
 }
 
 export interface AdminProduct extends Offer {

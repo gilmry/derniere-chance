@@ -17,6 +17,9 @@ Voir [`VISION.md`](./VISION.md) pour le produit en détail.
 - **Infra** : Docker Compose (profils `dev`/`prod`), images construites en CI
   (GitHub Actions → GHCR), déploiement GitOps par cron sur le serveur cible
   (voir [`deploy.sh`](./deploy.sh)).
+- **RGPD** : consentement explicite tracé pour le programme bêta, retrait en
+  un clic avec anonymisation du compte, rétention des journaux bornée à
+  30 jours (voir [`docs/rgpd/`](./docs/rgpd/)).
 
 ## Démarrer en local
 
@@ -50,6 +53,11 @@ le rapport (vidéos incluses) est publié sur GitHub Pages.
 - [`docs/mcp-oauth.md`](./docs/mcp-oauth.md) — serveur MCP (`/mcp`) avec
   OAuth 2.1/PKCE maison, pour connecter un client MCP (Claude Code, Claude
   Desktop, claude.ai) au compte d'un marchand en lecture/écriture.
+- [`docs/rgpd/registre-traitements.md`](./docs/rgpd/registre-traitements.md) —
+  registre des traitements (art. 30) du programme bêta : finalités, base
+  légale, durées de conservation, sous-traitants, mesures de sécurité.
+- [`infra/log-retention/`](./infra/log-retention) — politique de rétention
+  des journaux (30 jours), appliquée par `deploy.sh`.
 
 ## Licence
 

@@ -1,5 +1,6 @@
 mod auth;
 mod catalog;
+mod consent;
 mod dashboard;
 mod merchant;
 mod oauth;
@@ -10,6 +11,7 @@ pub use auth::{
     AuthResponse, Claims, LoginRequest, RegisterConsumerRequest, RegisterMerchantRequest,
 };
 pub use catalog::{MerchantProfileDto, OfferDto};
+pub use consent::{ConsentStatusDto, GrantConsentRequest};
 pub use dashboard::{ConsumerProfileDto, MerchantDashboardDto};
 pub use merchant::{MerchantResponseDto, UpdateMerchantDto};
 pub use oauth::{

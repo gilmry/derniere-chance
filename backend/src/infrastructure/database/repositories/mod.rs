@@ -1,4 +1,5 @@
 mod admin_repository_impl;
+mod consent_repository_impl;
 mod consumer_repository_impl;
 mod merchant_repository_impl;
 mod notification_repository_impl;
@@ -8,6 +9,7 @@ mod reservation_repository_impl;
 mod subscription_repository_impl;
 
 pub use admin_repository_impl::PostgresAdminRepository;
+pub use consent_repository_impl::PostgresConsentRepository;
 pub use consumer_repository_impl::PostgresConsumerRepository;
 pub use merchant_repository_impl::PostgresMerchantRepository;
 pub use notification_repository_impl::PostgresNotificationRepository;

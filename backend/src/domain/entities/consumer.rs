@@ -9,4 +9,7 @@ pub struct Consumer {
     #[serde(skip_serializing)]
     pub password_hash: String,
     pub created_at: DateTime<Utc>,
+    /// Renseigné quand le consommateur a retiré son consentement bêta :
+    /// `email` ne vaut alors plus qu'un identifiant technique.
+    pub anonymise_le: Option<DateTime<Utc>>,
 }

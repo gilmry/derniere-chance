@@ -1,0 +1,12 @@
+---
+// Écran de gestion du consentement au programme bêta : donner son accord
+// (compte créé avant la mise en place du consentement, ou texte modifié
+// depuis) et le retirer. Statique comme le reste du site, l'état est lu
+// côté client - voir components/BetaConsent.svelte.
+import AppLayout from "../layouts/AppLayout.astro";
+import BetaConsent from "../components/BetaConsent.svelte";
+---
+
+<AppLayout title="Programme bêta">
+  <BetaConsent client:load />
+</AppLayout>

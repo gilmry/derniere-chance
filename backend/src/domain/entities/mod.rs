@@ -1,4 +1,5 @@
 mod admin;
+mod consent;
 mod consumer;
 mod merchant;
 mod notification;
@@ -8,6 +9,7 @@ mod reservation;
 mod subscription;
 
 pub use admin::Admin;
+pub use consent::BetaConsent;
 pub use consumer::Consumer;
 pub use merchant::Merchant;
 pub use notification::{Notification, NotificationStatus};

@@ -22,11 +22,24 @@
 # Production DNS: point both DOMAIN and API_DOMAIN (A records) at the shared
 # host before starting.
 
+# Plafond commun aux journaux de conteneurs. Sans lui, Docker les laisse
+# grossir indéfiniment, alors qu'ils contiennent des adresses IP et des
+# chemins de requête, donc des données personnelles. 5 fichiers de 10 Mo =
+# 50 Mo par service, soit quelques semaines au rythme du bêta, après quoi les
+# plus anciens sont écrasés automatiquement.
+# Voir docs/rgpd/registre-traitements.md.
+x-journaux: &journaux
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
   postgres:
     image: postgres:16-alpine
     container_name: derniere-chance-postgres
     restart: unless-stopped
+    logging: *journaux
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-derniere_chance}
       POSTGRES_USER: ${POSTGRES_USER:-derniere_chance}
@@ -56,6 +69,7 @@ services:
     image: minio/minio:latest
     container_name: derniere-chance-minio
     restart: unless-stopped
+    logging: *journaux
     command: server /data --console-address :9001
     environment:
       MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
@@ -119,6 +133,7 @@ services:
     image: ${BACKEND_IMAGE:-ghcr.io/gilmry/derniere-chance/backend:latest}
     container_name: derniere-chance-backend
     restart: unless-stopped
+    logging: *journaux
     profiles: ["prod"]
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-derniere_chance}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-derniere_chance}
@@ -194,6 +209,7 @@ services:
     image: ${FRONTEND_IMAGE:-ghcr.io/gilmry/derniere-chance/frontend:latest}
     container_name: derniere-chance-frontend
     restart: unless-stopped
+    logging: *journaux
     profiles: ["prod"]
     depends_on:
       - backend

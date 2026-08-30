@@ -29,6 +29,10 @@ pub struct RegisterMerchantRequest {
 pub struct RegisterConsumerRequest {
     pub email: String,
     pub password: String,
+    /// Version du texte de consentement bêta cochée à l'inscription. Champ
+    /// obligatoire : une requête sans lui est rejetée par la désérialisation,
+    /// donc aucun compte ne peut être créé sans consentement explicite.
+    pub consent_version: String,
 }
 
 /// JWT claims shared by marchand and consommateur tokens. `role` disambiguates

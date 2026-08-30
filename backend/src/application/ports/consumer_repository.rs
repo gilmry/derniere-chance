@@ -19,5 +19,10 @@ pub trait ConsumerRepository: Send + Sync {
     /// Backoffice admin uniquement - cascade sur abonnements/réservations
     /// (ON DELETE CASCADE).
     async fn delete(&self, id: Uuid) -> Result<(), RepoError>;
+    /// Retrait du consentement bêta : remplace les données identifiantes par
+    /// des valeurs neutres et rend toute connexion impossible, sans
+    /// supprimer la ligne - la preuve de consentement et les réservations
+    /// déjà honorées par les commerçants y sont rattachées. Idempotent.
+    async fn anonymize(&self, id: Uuid) -> Result<(), RepoError>;
     async fn count(&self) -> Result<i64, RepoError>;
 }

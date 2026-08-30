@@ -1,0 +1,338 @@
+---
+import AppLayout from "../layouts/AppLayout.astro";
+import { BETA_CONSENT_VERSION } from "../lib/consent";
+
+// Mêmes valeurs injectées au build que sur /mentions-legales, pour que ce
+// gabarit reste réutilisable tel quel sur un autre déploiement.
+const domain = import.meta.env.PUBLIC_DOMAIN ?? "derniere-chance.ecosolva.org";
+const editorName = import.meta.env.PUBLIC_LEGAL_EDITOR_NAME ?? "Gilles Maury";
+const editorStatus =
+  import.meta.env.PUBLIC_LEGAL_EDITOR_STATUS ??
+  "indépendant (architecte solutions & développeur freelance)";
+const editorCity = import.meta.env.PUBLIC_LEGAL_EDITOR_CITY ?? "Bruxelles, Belgique";
+const businessNumber = import.meta.env.PUBLIC_LEGAL_BUSINESS_NUMBER ?? "BE0670.778.061";
+const contactEmail = import.meta.env.PUBLIC_LEGAL_CONTACT_EMAIL ?? "gilmry@gmail.com";
+---
+
+<AppLayout title="Politique de confidentialité">
+  <div class="screen">
+    <h1>Politique de confidentialité</h1>
+    <p class="version">
+      Version <code>{BETA_CONSENT_VERSION}</code> · applicable au programme
+      bêta de DernièreChance
+    </p>
+
+    <div class="card">
+      <h2>En bref</h2>
+      <p>
+        DernièreChance est en phase de test. Pour participer, vous nous
+        confiez votre adresse email et l'usage que vous faites de
+        l'application. Nous ne le faisons que parce que vous avez coché la
+        case au moment de votre inscription, et vous pouvez revenir sur cette
+        décision à tout moment : votre compte est alors anonymisé et vos
+        données cessent d'être exploitées.
+      </p>
+      <p>
+        Rien n'est revendu, rien n'est transmis à un annonceur, et il n'y a ni
+        traceur publicitaire ni mesure d'audience.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Qui est responsable de vos données</h2>
+      <p>
+        {editorName}, {editorStatus}, établi à {editorCity} (numéro
+        d'entreprise BCE/TVA {businessNumber}), édite et exploite
+        DernièreChance (<code>{domain}</code>) et décide de ce qui est fait de
+        vos données : c'est le responsable du traitement au sens du RGPD.
+      </p>
+      <p>
+        Contact pour toute question relative à vos données :
+        <a href={`mailto:${contactEmail}`}>{contactEmail}</a>. Aucun délégué à
+        la protection des données n'a été désigné, la structure et les
+        traitements n'atteignant pas les seuils qui l'imposeraient.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Pourquoi nous traitons vos données</h2>
+      <p>
+        Deux finalités, et rien d'autre :
+      </p>
+      <ul>
+        <li>
+          <strong>Faire fonctionner le service pendant le test</strong> : créer
+          votre compte, vous laisser suivre des commerçants, réserver un panier
+          et présenter un code de retrait en boutique.
+        </li>
+        <li>
+          <strong>Améliorer le produit</strong> : comprendre ce qui est utilisé,
+          ce qui coince et ce qui plante, pour corriger et faire évoluer
+          l'application.
+        </li>
+      </ul>
+      <p>
+        S'y ajoute une nécessité technique : <strong>assurer la sécurité du
+        service</strong>, c'est-à-dire détecter et bloquer les attaques contre
+        le serveur.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Sur quelle base légale</h2>
+      <p>
+        <strong>Votre consentement explicite</strong> (article 6.1.a du RGPD),
+        recueilli par une case à cocher non pré-cochée au moment de votre
+        inscription. Nous conservons la date de votre accord et la version du
+        présent texte que vous avez acceptée.
+      </p>
+      <p>
+        Vous pouvez retirer ce consentement à tout moment et sans vous
+        justifier. Le retrait ne remet pas en cause ce qui a été fait avant,
+        mais il met fin au traitement pour l'avenir.
+      </p>
+      <p>
+        Seuls les journaux de sécurité reposent sur une base différente :
+        notre <strong>intérêt légitime</strong> (article 6.1.f) à protéger le
+        serveur contre les intrusions. Ils sont détaillés plus bas.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Quelles données nous collectons</h2>
+      <p><strong>Votre compte</strong></p>
+      <ul>
+        <li>Votre adresse email.</li>
+        <li>
+          Votre mot de passe, jamais stocké en clair : seule une empreinte
+          bcrypt est enregistrée, à partir de laquelle il est impossible de
+          retrouver le mot de passe d'origine.
+        </li>
+        <li>La date de création du compte.</li>
+        <li>
+          La date de votre consentement et la version du texte accepté.
+        </li>
+      </ul>
+
+      <p><strong>Votre usage de l'application</strong></p>
+      <ul>
+        <li>Les commerçants que vous suivez.</li>
+        <li>
+          Vos réservations : le panier concerné, le code de retrait, la date et
+          l'état (réservé, récupéré, expiré).
+        </li>
+        <li>Les notifications qui vous ont été envoyées.</li>
+      </ul>
+      <p>
+        Votre position géographique <strong>n'est jamais enregistrée</strong> :
+        si vous l'autorisez, elle sert le temps d'une requête à calculer une
+        distance, puis elle est oubliée.
+      </p>
+
+      <p><strong>Journaux techniques et de sécurité</strong></p>
+      <p>
+        Le serveur qui héberge DernièreChance conserve des journaux
+        indispensables à son exploitation et à sa sécurité. Ils contiennent
+        des adresses IP, des dates et des chemins d'accès :
+      </p>
+      <ul>
+        <li>
+          <strong>Journaux applicatifs</strong> : les requêtes reçues par
+          l'application et les erreurs rencontrées.
+        </li>
+        <li>
+          <strong>Suricata</strong> (détection d'intrusion réseau) et
+          <strong>CrowdSec</strong> (détection de comportements malveillants)
+          : trafic suspect visant le serveur.
+        </li>
+        <li>
+          <strong>Fail2ban</strong> : tentatives de connexion répétées et
+          blocages d'adresses IP qui en découlent.
+        </li>
+        <li>
+          <strong>AIDE</strong> (contrôle d'intégrité des fichiers) : ce
+          journal porte sur les fichiers du système, pas sur les personnes.
+        </li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>Combien de temps nous les gardons</h2>
+      <ul>
+        <li>
+          <strong>Compte et données d'usage</strong> : pendant toute la durée
+          du programme bêta. À sa clôture, tous les comptes de testeurs sont
+          supprimés ou anonymisés dans un délai d'un mois.
+        </li>
+        <li>
+          <strong>Preuve du consentement</strong> : trois ans après le retrait
+          ou la fin du programme, comme le recommandent les autorités de
+          contrôle, et sous une forme qui ne permet plus de vous identifier une
+          fois le compte anonymisé.
+        </li>
+        <li>
+          <strong>Réservations</strong> : douze mois, parce que les
+          commerçants s'appuient dessus pour leurs statistiques. Elles sont
+          détachées de votre identité dès que votre compte est anonymisé.
+        </li>
+        <li>
+          <strong>Journaux applicatifs</strong> : bornés en volume, soit
+          quelques semaines au rythme actuel du bêta, puis écrasés
+          automatiquement.
+        </li>
+        <li>
+          <strong>Journaux de sécurité</strong> (Suricata, CrowdSec, Fail2ban,
+          AIDE, journaux système) : <strong>30 jours au maximum</strong>. La
+          rotation et la purge sont automatiques, aucune conservation
+          indéfinie n'est possible.
+        </li>
+      </ul>
+      <p>
+        Si vous retirez votre consentement, votre compte est anonymisé
+        immédiatement, sans attendre ces échéances.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Qui d'autre y a accès</h2>
+      <p>
+        DernièreChance est auto-hébergé : l'application, la base de données et
+        les photos tournent sur un serveur administré directement par
+        l'éditeur, sans plateforme d'hébergement applicatif tierce. Le
+        fournisseur du serveur physique n'accède pas aux données, qui restent
+        chiffrées en transit (TLS via Traefik et Let's Encrypt).
+      </p>
+      <p>
+        Un seul sous-traitant intervient : <strong>l'outil d'automatisation
+        n8n</strong> auto-hébergé, qui déclenche l'envoi des emails de
+        notification (nouvelle réservation, retrait effectué). Il ne reçoit que
+        les informations strictement nécessaires à ces emails.
+      </p>
+      <p>
+        Les commerçants concernés voient les réservations qui leur sont
+        destinées, ce qui est le principe même du service. Aucune donnée n'est
+        vendue, louée ou communiquée à un tiers à des fins publicitaires, et
+        aucune n'est transférée hors de l'Union européenne.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Vos droits</h2>
+      <p>Vous disposez à tout moment des droits suivants :</p>
+      <ul>
+        <li>
+          <strong>Accès</strong> : obtenir une copie des données que nous
+          détenons sur vous.
+        </li>
+        <li>
+          <strong>Rectification</strong> : faire corriger une donnée inexacte.
+        </li>
+        <li>
+          <strong>Effacement</strong> : demander la suppression de votre compte
+          et de vos données.
+        </li>
+        <li>
+          <strong>Retrait du consentement</strong> : mettre fin à votre
+          participation au programme bêta, ce qui déclenche automatiquement
+          l'anonymisation de votre compte. C'est immédiat et sans démarche,
+          depuis <a href="/consentement">la page Programme bêta</a>.
+        </li>
+        <li>
+          <strong>Limitation et opposition</strong> : demander le gel d'un
+          traitement ou vous y opposer.
+        </li>
+        <li>
+          <strong>Portabilité</strong> : recevoir vos données dans un format
+          lisible par machine.
+        </li>
+      </ul>
+      <p>
+        Pour exercer l'un de ces droits, écrivez à
+        <a href={`mailto:${contactEmail}`}>{contactEmail}</a>. Nous répondons
+        dans un délai d'un mois. Aucune décision automatisée ni aucun
+        profilage n'est appliqué à votre égard.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Si vous n'êtes pas satisfait</h2>
+      <p>
+        L'éditeur étant établi en Belgique, l'autorité de contrôle compétente
+        est l'<strong>Autorité de protection des données</strong> (APD /
+        Gegevensbeschermingsautoriteit), rue de la Presse 35, 1000 Bruxelles,
+        <a href="https://www.autoriteprotectiondonnees.be" target="_blank" rel="noopener">
+          autoriteprotectiondonnees.be
+        </a>.
+      </p>
+      <p>
+        Si vous résidez en France, vous pouvez tout aussi bien saisir la
+        <strong>CNIL</strong> (<a href="https://www.cnil.fr" target="_blank" rel="noopener">cnil.fr</a>),
+        en sa qualité d'autorité concernée : elle transmettra à l'APD, qui
+        instruira le dossier en tant qu'autorité chef de file (guichet unique,
+        article 56 du RGPD). Vous pouvez aussi vous adresser directement à
+        l'APD, comme vous préférez.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Si ce texte change</h2>
+      <p>
+        Toute modification de fond donne lieu à une nouvelle version, et votre
+        accord vous est redemandé avant de pouvoir continuer à utiliser
+        l'application. La version en vigueur est indiquée en haut de cette
+        page.
+      </p>
+    </div>
+  </div>
+</AppLayout>
+
+<style>
+  .screen {
+    padding: 24px 20px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  h1 {
+    font-size: 22px;
+  }
+
+  h2 {
+    font-size: 15px;
+    margin-bottom: 8px;
+  }
+
+  .version {
+    font-size: 12px;
+    color: var(--color-muted-light);
+  }
+
+  .card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px;
+  }
+
+  .card p,
+  .card li {
+    font-size: 13px;
+    color: var(--color-muted);
+    line-height: 1.6;
+  }
+
+  .card ul {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-left: 18px;
+  }
+
+  code {
+    font-family: monospace;
+    background: var(--color-chip);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+</style>

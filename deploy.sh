@@ -133,6 +133,15 @@ bootstrap() {
 
   touch "$LOG_FILE"
 
+  echo "==> application de la politique de rétention des journaux (RGPD)"
+  # Idempotent, et volontairement non bloquant : un serveur sans systemd ou
+  # sans logrotate ne doit pas empêcher le déploiement. Le script rapporte ce
+  # qu'il n'a pas pu faire, à traiter à la main le cas échéant.
+  if ! "$REPO_DIR/infra/log-retention/install.sh"; then
+    echo "ATTENTION : la politique de rétention n'a pas pu être appliquée," >&2
+    echo "            relancer infra/log-retention/install.sh à la main." >&2
+  fi
+
   echo "==> programmation du déploiement auto (cron, toutes les $CRON_SCHEDULE)"
   local cron_line="$CRON_SCHEDULE $REPO_DIR/deploy.sh --run # $CRON_MARKER"
   local existing_crontab
@@ -152,7 +161,8 @@ bootstrap() {
 Bootstrap terminé.
 - Dépendances installées : docker, docker compose plugin, git, cron
 - Cron installé : $cron_line
-- Logs de déploiement : $LOG_FILE
+- Logs de déploiement : $LOG_FILE (tournés, 30 jours max)
+- Rétention des journaux : 30 jours (voir infra/log-retention/)
 
 Avant le premier déploiement :
 1. Vérifier que le Traefik partagé tourne et que le réseau 'ecosolva-web' existe.

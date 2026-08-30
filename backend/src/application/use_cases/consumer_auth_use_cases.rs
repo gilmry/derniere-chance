@@ -5,7 +5,10 @@ use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation}
 use thiserror::Error;
 
 use crate::application::dto::{AuthResponse, Claims, LoginRequest, RegisterConsumerRequest};
-use crate::application::ports::{ConsumerRepository, EventNotifier, NewConsumer, RepoError};
+use crate::application::ports::{
+    ConsentRepository, ConsumerRepository, EventNotifier, NewConsumer, RepoError,
+};
+use crate::application::use_cases::BETA_CONSENT_VERSION;
 use crate::domain::entities::Consumer;
 
 #[derive(Debug, Error)]
@@ -14,6 +17,8 @@ pub enum ConsumerAuthError {
     EmailTaken,
     #[error("invalid email or password")]
     InvalidCredentials,
+    #[error("consent version is no longer current")]
+    StaleConsentVersion,
     #[error("invalid or expired token")]
     InvalidToken,
     #[error("password hashing failed")]
@@ -27,6 +32,7 @@ const ROLE: &str = "consommateur";
 
 pub struct ConsumerAuthUseCases {
     consumer_repo: Arc<dyn ConsumerRepository>,
+    consent_repo: Arc<dyn ConsentRepository>,
     jwt_secret: String,
     event_notifier: Arc<dyn EventNotifier>,
 }
@@ -34,11 +40,13 @@ pub struct ConsumerAuthUseCases {
 impl ConsumerAuthUseCases {
     pub fn new(
         consumer_repo: Arc<dyn ConsumerRepository>,
+        consent_repo: Arc<dyn ConsentRepository>,
         jwt_secret: String,
         event_notifier: Arc<dyn EventNotifier>,
     ) -> Self {
         Self {
             consumer_repo,
+            consent_repo,
             jwt_secret,
             event_notifier,
         }
@@ -48,6 +56,13 @@ impl ConsumerAuthUseCases {
         &self,
         dto: RegisterConsumerRequest,
     ) -> Result<AuthResponse, ConsumerAuthError> {
+        // Vérifié avant toute écriture : inutile de créer un compte si la
+        // case cochée portait sur un texte qui n'est plus en vigueur (page
+        // restée ouverte pendant un déploiement).
+        if dto.consent_version != BETA_CONSENT_VERSION {
+            return Err(ConsumerAuthError::StaleConsentVersion);
+        }
+
         if self
             .consumer_repo
             .find_by_email(&dto.email)
@@ -66,6 +81,17 @@ impl ConsumerAuthUseCases {
                 email: dto.email,
                 password_hash,
             })
+            .await?;
+
+        // Deux écritures successives, faute de transaction traversant les
+        // ports. Si celle-ci échoue, le compte existe sans consentement et
+        // le portier `ConsentedConsumer` le bloque jusqu'à ce que la
+        // personne consente depuis /consentement : l'échec est fermé.
+        //
+        // Enregistré avant la notification : annoncer une inscription qui
+        // serait ensuite bloquée faute de consentement induirait en erreur.
+        self.consent_repo
+            .grant(consumer.id, BETA_CONSENT_VERSION)
             .await?;
 
         self.event_notifier

@@ -1,4 +1,5 @@
 mod admin_repository;
+mod consent_repository;
 mod consumer_repository;
 mod email_sender;
 mod error;
@@ -11,6 +12,7 @@ mod reservation_repository;
 mod subscription_repository;
 
 pub use admin_repository::AdminRepository;
+pub use consent_repository::ConsentRepository;
 pub use consumer_repository::{ConsumerRepository, NewConsumer};
 pub use email_sender::{EmailError, EmailSender};
 pub use error::RepoError;

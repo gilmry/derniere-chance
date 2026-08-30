@@ -1,6 +1,7 @@
 mod admin_auth_handlers;
 mod admin_handlers;
 mod catalog_handlers;
+mod consent_handlers;
 mod consumer_auth_handlers;
 mod dashboard_handlers;
 mod merchant_auth_handlers;
@@ -22,6 +23,10 @@ pub use photo_handlers::{upload_logo, upload_photo};
 pub use product_handlers::{list_mine, mark_ecoule, publish, update_product};
 pub use reservation_handlers::{list_my_reservations, reserve, validate_pickup};
 pub use subscription_handlers::{follow, list_followed, unfollow};
+
+pub mod consent {
+    pub use super::consent_handlers::{grant, status, withdraw};
+}
 
 pub mod consumer_auth {
     pub use super::consumer_auth_handlers::{login, register};
