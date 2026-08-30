@@ -23,6 +23,29 @@ log() { echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] $*" >> "$LOG_FILE"; }
 
 run_deploy() {
   cd "$REPO_DIR"
+
+  # `docker` est un SNAP : le binaire vit dans `/snap/bin`. Le PATH de cron le
+  # contient aujourd'hui, mais un déploiement automatique ne devrait pas en
+  # dépendre en silence.
+  case ":$PATH:" in
+    *:/snap/bin:*) ;;
+    *) PATH="/snap/bin:$PATH" ;;
+  esac
+  export PATH
+
+  # Échouer BRUYAMMENT si docker est injoignable, au lieu de mourir muet.
+  #
+  # Sans ce contrôle, `running="$(docker compose …)"` plus bas échoue, `set -e`
+  # tue le script AVANT sa première écriture de journal, et la panne devient
+  # indiscernable d'un déploiement qui n'avait rien à faire. C'est exactement
+  # ce qui s'est produit du 2026-08-27 au 2026-08-29 : socket docker recréé en
+  # `root:root`, aucun groupe `docker` sur la machine, et les quatre projets du
+  # VPS muets pendant deux jours, sans un seul fichier de log pour le dire.
+  if ! docker info >/dev/null 2>&1; then
+    log "ERREUR: docker injoignable, déploiement impossible"
+    exit 1
+  fi
+
   exec 9>"$LOCK_FILE"
   flock -n 9 || exit 0
 

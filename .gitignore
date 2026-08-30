@@ -19,3 +19,8 @@
 # Editors / OS
 .DS_Store
 *.swp
+
+# Déploiement (état runtime local, écrit par deploy.sh)
+/deploy.log
+/.deploy.lock
+/.deployed_rev
