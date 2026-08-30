@@ -4,7 +4,8 @@ use thiserror::Error;
 
 use crate::application::dto::ConsentStatusDto;
 use crate::application::ports::{
-    ConsentRepository, ConsumerRepository, MerchantRepository, ProductRepository, RepoError,
+    ConsentRepository, ConsumerRepository, EventNotifier, MerchantRepository, ProductRepository,
+    RepoError,
 };
 use crate::domain::entities::ConsentSubject;
 
@@ -35,6 +36,7 @@ pub struct ConsentUseCases {
     consumer_repo: Arc<dyn ConsumerRepository>,
     merchant_repo: Arc<dyn MerchantRepository>,
     product_repo: Arc<dyn ProductRepository>,
+    event_notifier: Arc<dyn EventNotifier>,
 }
 
 impl ConsentUseCases {
@@ -43,12 +45,14 @@ impl ConsentUseCases {
         consumer_repo: Arc<dyn ConsumerRepository>,
         merchant_repo: Arc<dyn MerchantRepository>,
         product_repo: Arc<dyn ProductRepository>,
+        event_notifier: Arc<dyn EventNotifier>,
     ) -> Self {
         Self {
             consent_repo,
             consumer_repo,
             merchant_repo,
             product_repo,
+            event_notifier,
         }
     }
 
@@ -110,16 +114,42 @@ impl ConsentUseCases {
     pub async fn withdraw(&self, subject: ConsentSubject) -> Result<(), ConsentError> {
         self.consent_repo.withdraw(subject).await?;
 
-        match subject {
+        let detail = match subject {
             ConsentSubject::Consumer(id) => {
                 self.consumer_repo.anonymize(id).await?;
+                String::new()
             }
             ConsentSubject::Merchant(id) => {
                 let retires = self.product_repo.unpublish_all_by_merchant(id).await?;
                 self.merchant_repo.anonymize(id).await?;
                 tracing::info!(marchand_id = %id, retires, "paniers dépubliés au retrait du consentement");
+                format!(" {retires} panier(s) dépublié(s).")
             }
-        }
+        };
+
+        // Le responsable de traitement doit savoir qu'un effacement a eu lieu,
+        // pour pouvoir le porter au suivi des demandes d'exercice des droits.
+        //
+        // Le message ne porte QUE l'identifiant technique et le rôle : y
+        // mettre l'email ou le nom du commerce ferait survivre la donnée
+        // qu'on vient d'effacer dans une boîte mail et chez le sous-traitant
+        // qui achemine la notification. Ce serait exactement le contraire du
+        // droit qu'on est en train d'honorer.
+        //
+        // Émis après l'anonymisation : n'annoncer un effacement qu'une fois
+        // qu'il a réellement eu lieu. `notify` est fire-and-forget, un échec
+        // d'acheminement ne remet pas en cause l'effacement.
+        self.event_notifier
+            .notify(
+                "compte_anonymise",
+                format!(
+                    "Retrait de consentement RGPD : compte {} anonymisé \
+                     (identifiant technique {}).{detail}",
+                    subject.role(),
+                    subject.id(),
+                ),
+            )
+            .await;
 
         Ok(())
     }
@@ -360,12 +390,30 @@ mod tests {
         }
     }
 
+    /// Enregistre les notifications émises, pour vérifier ce qu'elles
+    /// contiennent - et surtout ce qu'elles ne contiennent pas.
+    #[derive(Default)]
+    struct FakeNotifier {
+        events: Mutex<Vec<(String, String)>>,
+    }
+
+    #[async_trait::async_trait]
+    impl EventNotifier for FakeNotifier {
+        async fn notify(&self, event: &str, message: String) {
+            self.events
+                .lock()
+                .unwrap()
+                .push((event.to_string(), message));
+        }
+    }
+
     struct Harness {
         use_cases: ConsentUseCases,
         consents: Arc<FakeConsentRepo>,
         consumers: Arc<FakeConsumerRepo>,
         merchants: Arc<FakeMerchantRepo>,
         products: Arc<FakeProductRepo>,
+        notifier: Arc<FakeNotifier>,
     }
 
     fn harness() -> Harness {
@@ -373,17 +421,20 @@ mod tests {
         let consumers = Arc::new(FakeConsumerRepo::default());
         let merchants = Arc::new(FakeMerchantRepo::default());
         let products = Arc::new(FakeProductRepo::default());
+        let notifier = Arc::new(FakeNotifier::default());
         Harness {
             use_cases: ConsentUseCases::new(
                 consents.clone(),
                 consumers.clone(),
                 merchants.clone(),
                 products.clone(),
+                notifier.clone(),
             ),
             consents,
             consumers,
             merchants,
             products,
+            notifier,
         }
     }
 
@@ -588,6 +639,58 @@ mod tests {
         // L'accord périmé est horodaté comme retiré, pas effacé.
         assert_eq!(h.consents.history_len(), 1);
         assert!(h.consents.rows.lock().unwrap()[0].retire_le.is_some());
+    }
+
+    // --- Notification d'effacement ---
+
+    #[tokio::test]
+    async fn l_effacement_est_notifie_au_responsable_de_traitement() {
+        let h = harness();
+        let id = Uuid::new_v4();
+        h.use_cases
+            .withdraw(ConsentSubject::Consumer(id))
+            .await
+            .unwrap();
+
+        let events = h.notifier.events.lock().unwrap();
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].0, "compte_anonymise");
+        assert!(events[0].1.contains("consommateur"));
+        assert!(events[0].1.contains(&id.to_string()));
+    }
+
+    #[tokio::test]
+    async fn la_notification_marchand_indique_les_paniers_depublies() {
+        let h = harness();
+        let id = Uuid::new_v4();
+        h.use_cases
+            .withdraw(ConsentSubject::Merchant(id))
+            .await
+            .unwrap();
+
+        let events = h.notifier.events.lock().unwrap();
+        assert_eq!(events[0].0, "compte_anonymise");
+        assert!(events[0].1.contains("marchand"));
+        assert!(events[0].1.contains("1 panier(s) dépublié(s)"));
+    }
+
+    #[tokio::test]
+    async fn la_notification_ne_transporte_aucune_donnee_personnelle() {
+        // Le garde-fou qui compte : mettre l'email ou le nom du commerce dans
+        // la notification ferait survivre, dans une boîte mail et chez le
+        // sous-traitant qui l'achemine, la donnée qu'on vient d'effacer.
+        let h = harness();
+        let id = Uuid::new_v4();
+        h.use_cases
+            .withdraw(ConsentSubject::Merchant(id))
+            .await
+            .unwrap();
+
+        let events = h.notifier.events.lock().unwrap();
+        let message = &events[0].1;
+        assert!(!message.contains('@'), "aucune adresse email attendue");
+        // Seul l'identifiant technique, déjà opaque, identifie la ligne.
+        assert!(message.contains(&id.to_string()));
     }
 
     #[tokio::test]

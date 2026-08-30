@@ -119,7 +119,7 @@ immédiatement.
 | Destinataire | Rôle | Ce qu'il reçoit |
 |---|---|---|
 | Commerçant partenaire | Destinataire | Les réservations le concernant (code de retrait, panier, statut) |
-| n8n auto-hébergé | Sous-traitant | Les seules informations nécessaires aux emails de notification (nouvelle réservation, retrait effectué) |
+| n8n auto-hébergé | Sous-traitant | Les seules informations nécessaires aux emails de notification (nouvelle réservation, retrait effectué, inscription). Pour l'événement `compte_anonymise`, uniquement l'identifiant technique et le rôle : jamais l'email ni le nom du commerce, sans quoi la donnée effacée survivrait chez le sous-traitant |
 | Fournisseur du serveur (VPS) | Hébergeur d'infrastructure | Aucun accès applicatif ; données chiffrées en transit |
 
 Auto-hébergement : application, base PostgreSQL et photos (MinIO) tournent sur
@@ -157,6 +157,9 @@ d'outil de mesure d'audience.
 
 **Organisationnelles**
 
+- Notification au responsable de traitement à chaque effacement
+  (événement `compte_anonymise`), pour alimenter le suivi des demandes
+  d'exercice des droits. Le message ne porte aucune donnée identifiante.
 - Un seul administrateur, compte backoffice unique et nominatif.
 - Code source public sous licence MIT : les traitements sont auditables par
   quiconque (github.com/gilmry/derniere-chance).
@@ -210,3 +213,4 @@ marchand étant un point de vente fixe, non une trajectoire.
 |---|---|
 | 2026-08-30 | Création du registre. Mise en conformité initiale du programme bêta : consentement explicite tracé, retrait automatisé avec anonymisation, politique de confidentialité publiée, rétention des journaux bornée à 30 jours. |
 | 2026-08-30 | Extension du consentement aux commerçants partenaires (nom, adresse et position publiés sur la carte). Retrait côté marchand : dépublication des paniers puis anonymisation. Portier étendu à tous les endpoints marchand, `/mcp` compris. |
+| 2026-08-30 | Effacement possible sans avoir consenti (compte antérieur, ou refus d'une nouvelle version du texte). Notification `compte_anonymise` au responsable de traitement à chaque effacement, sans donnée identifiante. |

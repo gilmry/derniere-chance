@@ -1,11 +1,18 @@
 # Notifications par email (n8n)
 
-DernièreChance notifie un webhook pour quatre événements notables :
+DernièreChance notifie un webhook pour cinq événements notables :
 inscription d'un marchand, inscription d'un client, nouvelle réservation,
-panier récupéré au retrait (voir
+panier récupéré au retrait, et anonymisation d'un compte après retrait du
+consentement (voir
 `backend/src/infrastructure/notifications/webhook_notifier.rs` et
 `backend/src/application/ports/event_notifier.rs`). Ce fichier documente
 le workflow n8n qui reçoit ces appels et envoie un email pour chacun.
+
+> **`compte_anonymise` : ne jamais enrichir ce message.** Il ne porte que
+> l'identifiant technique et le rôle, jamais l'email ni le nom du commerce.
+> Y ajouter une donnée identifiante ferait survivre, dans une boîte mail et
+> chez le sous-traitant qui l'achemine, précisément ce que l'effacement vient
+> de supprimer. Voir `docs/rgpd/registre-traitements.md`.
 
 ## Schéma
 
@@ -109,7 +116,8 @@ const usageNote = sticky(
   '## Notifications DernièreChance\n\n' +
   'Webhook attend un POST JSON du backend DernièreChance avec\n' +
   '`{ "event": "...", "message": "..." }` (ex: nouvelle_reservation,\n' +
-  'nouveau_marchand, nouveau_consommateur, panier_recupere). Un email part\n' +
+  'nouveau_marchand, nouveau_consommateur, panier_recupere,\n' +
+  'compte_anonymise). Un email part\n' +
   'pour CHAQUE appel reçu ici - le filtrage "édifiant ou pas" se fait\n' +
   'côté backend en choisissant quand appeler ce webhook, pas dans ce\n' +
   'workflow.\n\n' +

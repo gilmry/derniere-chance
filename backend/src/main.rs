@@ -101,6 +101,7 @@ async fn main() -> std::io::Result<()> {
             consumer_repo.clone(),
             merchant_repo.clone(),
             product_repo.clone(),
+            event_notifier.clone(),
         )),
         admin_use_cases,
         catalog_use_cases: Arc::new(CatalogUseCases::new(
