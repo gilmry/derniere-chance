@@ -25,7 +25,10 @@ pub use reservation_handlers::{list_my_reservations, reserve, validate_pickup};
 pub use subscription_handlers::{follow, list_followed, unfollow};
 
 pub mod consent {
-    pub use super::consent_handlers::{grant, status, withdraw};
+    pub use super::consent_handlers::{
+        consumer_grant, consumer_status, consumer_withdraw, merchant_grant, merchant_status,
+        merchant_withdraw,
+    };
 }
 
 pub mod consumer_auth {

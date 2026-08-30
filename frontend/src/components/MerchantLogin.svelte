@@ -16,12 +16,20 @@
   let nom = "";
   let adresse = "";
   let categorie = "";
+  // Jamais pré-cochée : le consentement doit être un acte positif (RGPD
+  // art. 4 §11). Le commerçant confie plus qu'un client - nom, adresse et
+  // position, tous publiés sur la carte - donc la case le dit explicitement.
+  let consent = false;
   let error = "";
   let loading = false;
 
   async function submit(event: SubmitEvent) {
     event.preventDefault();
     error = "";
+    if (mode === "register" && !consent) {
+      error = "Il faut accepter de participer au programme bêta pour créer un compte.";
+      return;
+    }
     loading = true;
     try {
       let auth;
@@ -69,6 +77,17 @@
       {/if}
       <input placeholder="Email professionnel" type="email" bind:value={email} required />
       <input placeholder="Mot de passe" type="password" bind:value={password} required minlength="8" />
+      {#if mode === "register"}
+        <label class="consent">
+          <input type="checkbox" bind:checked={consent} required />
+          <span>
+            J'accepte de participer au programme bêta et la collecte de mes données,
+            dont le nom, l'adresse et la position de mon commerce affichés publiquement,
+            telles que décrites dans la
+            <a href="/confidentialite" target="_blank" rel="noopener">politique de confidentialité</a>.
+          </span>
+        </label>
+      {/if}
       {#if error}<p class="error">{error}</p>{/if}
     </div>
     <button class="btn btn-primary" type="submit" disabled={loading}>
@@ -145,6 +164,30 @@
 
   input::placeholder {
     color: rgba(255, 255, 255, 0.5);
+  }
+
+  .consent {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.75);
+    padding: 2px;
+  }
+
+  .consent input {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    margin-top: 1px;
+    padding: 0;
+    accent-color: var(--color-primary);
+  }
+
+  .consent a {
+    color: #fff;
+    font-weight: 600;
   }
 
   .error {

@@ -11,9 +11,10 @@ use crate::application::dto::{
     UpdateMerchantDto,
 };
 use crate::application::ports::{
-    EventNotifier, MerchantRepository, MerchantUpdate, NewMerchant, RepoError,
+    ConsentRepository, EventNotifier, MerchantRepository, MerchantUpdate, NewMerchant, RepoError,
 };
-use crate::domain::entities::Merchant;
+use crate::application::use_cases::BETA_CONSENT_VERSION;
+use crate::domain::entities::{ConsentSubject, Merchant};
 
 #[derive(Debug, Error)]
 pub enum MerchantAuthError {
@@ -21,6 +22,8 @@ pub enum MerchantAuthError {
     EmailTaken,
     #[error("invalid email or password")]
     InvalidCredentials,
+    #[error("consent version is no longer current")]
+    StaleConsentVersion,
     #[error("invalid or expired token")]
     InvalidToken,
     #[error("password hashing failed")]
@@ -36,6 +39,7 @@ const ROLE: &str = "marchand";
 
 pub struct MerchantAuthUseCases {
     merchant_repo: Arc<dyn MerchantRepository>,
+    consent_repo: Arc<dyn ConsentRepository>,
     jwt_secret: String,
     event_notifier: Arc<dyn EventNotifier>,
 }
@@ -43,11 +47,13 @@ pub struct MerchantAuthUseCases {
 impl MerchantAuthUseCases {
     pub fn new(
         merchant_repo: Arc<dyn MerchantRepository>,
+        consent_repo: Arc<dyn ConsentRepository>,
         jwt_secret: String,
         event_notifier: Arc<dyn EventNotifier>,
     ) -> Self {
         Self {
             merchant_repo,
+            consent_repo,
             jwt_secret,
             event_notifier,
         }
@@ -57,6 +63,12 @@ impl MerchantAuthUseCases {
         &self,
         dto: RegisterMerchantRequest,
     ) -> Result<AuthResponse, MerchantAuthError> {
+        // Vérifié avant toute écriture : inutile de créer un compte si la
+        // case cochée portait sur un texte qui n'est plus en vigueur.
+        if dto.consent_version != BETA_CONSENT_VERSION {
+            return Err(MerchantAuthError::StaleConsentVersion);
+        }
+
         if self
             .merchant_repo
             .find_by_email(&dto.email)
@@ -80,6 +92,15 @@ impl MerchantAuthUseCases {
                 latitude: dto.latitude,
                 longitude: dto.longitude,
             })
+            .await?;
+
+        // Enregistré avant la notification : annoncer une inscription qui
+        // serait ensuite bloquée faute de consentement induirait en erreur.
+        // Si cette écriture échoue, le compte existe sans consentement et le
+        // portier `ConsentedMerchant` le bloque jusqu'à ce que le commerçant
+        // consente depuis /pro/consentement : l'échec est fermé.
+        self.consent_repo
+            .grant(ConsentSubject::Merchant(merchant.id), BETA_CONSENT_VERSION)
             .await?;
 
         self.event_notifier

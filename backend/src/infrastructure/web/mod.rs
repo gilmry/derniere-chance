@@ -8,5 +8,6 @@ pub mod routes;
 pub use app_state::AppState;
 pub use middleware::{
     AuthenticatedAdmin, AuthenticatedConsumer, AuthenticatedMerchant, ConsentedConsumer,
+    ConsentedMerchant,
 };
 pub use routes::configure_routes;

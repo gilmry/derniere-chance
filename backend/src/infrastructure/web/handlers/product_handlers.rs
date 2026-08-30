@@ -7,11 +7,11 @@ use crate::infrastructure::web::app_state::AppState;
 use crate::infrastructure::web::handlers::responses::{
     bad_request, forbidden, internal_error, not_found,
 };
-use crate::infrastructure::web::middleware::AuthenticatedMerchant;
+use crate::infrastructure::web::middleware::ConsentedMerchant;
 
 pub async fn publish(
     state: web::Data<AppState>,
-    merchant: AuthenticatedMerchant,
+    merchant: ConsentedMerchant,
     dto: web::Json<CreateProductDto>,
 ) -> HttpResponse {
     match state
@@ -31,7 +31,7 @@ pub async fn publish(
 
 pub async fn update_product(
     state: web::Data<AppState>,
-    merchant: AuthenticatedMerchant,
+    merchant: ConsentedMerchant,
     path: web::Path<Uuid>,
     dto: web::Json<CreateProductDto>,
 ) -> HttpResponse {
@@ -53,7 +53,7 @@ pub async fn update_product(
 
 pub async fn mark_ecoule(
     state: web::Data<AppState>,
-    merchant: AuthenticatedMerchant,
+    merchant: ConsentedMerchant,
     path: web::Path<Uuid>,
 ) -> HttpResponse {
     match state
@@ -71,7 +71,7 @@ pub async fn mark_ecoule(
     }
 }
 
-pub async fn list_mine(state: web::Data<AppState>, merchant: AuthenticatedMerchant) -> HttpResponse {
+pub async fn list_mine(state: web::Data<AppState>, merchant: ConsentedMerchant) -> HttpResponse {
     match state.product_use_cases.list_mine(merchant.marchand_id).await {
         Ok(products) => HttpResponse::Ok().json(products),
         Err(err) => {

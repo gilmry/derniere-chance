@@ -11,14 +11,26 @@
 /// inscription qui accepte une version différente de la sienne.
 export const BETA_CONSENT_VERSION = "2026-08-30";
 
+/// Un écran par principal : les jetons marchand et consommateur ne sont pas
+/// interchangeables, donc le retour vers le bon espace non plus.
 export const CONSENT_PATH = "/consentement";
+export const MERCHANT_CONSENT_PATH = "/pro/consentement";
 
-// Pages atteignables sans consentement : l'accueil et l'inscription (on n'a
-// pas encore pu consentir), les pages légales (les lire est justement le
-// préalable), et les espaces marchand/admin, qui relèvent d'autres
-// principaux et ne sont pas concernés par le programme bêta consommateur.
-const EXEMPT_PATHS = ["/", "/compte", CONSENT_PATH, "/confidentialite", "/mentions-legales"];
-const EXEMPT_PREFIXES = ["/pro/", "/admin"];
+// Pages atteignables sans consentement : l'accueil et les écrans
+// d'inscription/connexion (on n'a pas encore pu consentir), les pages
+// légales (les lire est justement le préalable), et les deux écrans de
+// consentement eux-mêmes. L'espace admin relève d'un principal qui n'est pas
+// concerné par le programme bêta.
+const EXEMPT_PATHS = [
+  "/",
+  "/compte",
+  "/confidentialite",
+  "/mentions-legales",
+  "/pro/login",
+  CONSENT_PATH,
+  MERCHANT_CONSENT_PATH,
+];
+const EXEMPT_PREFIXES = ["/admin"];
 
 /// Astro sert les pages statiques indifféremment en `/compte` ou `/compte/`,
 /// d'où la normalisation avant comparaison.
@@ -27,9 +39,14 @@ export function isConsentExempt(pathname: string): boolean {
   return EXEMPT_PATHS.includes(path) || EXEMPT_PREFIXES.some((prefix) => path.startsWith(prefix));
 }
 
-export function redirectToConsent(): void {
+/// Vrai pour les pages de l'espace marchand, qui relèvent du jeton marchand.
+export function isMerchantPath(pathname: string): boolean {
+  return pathname.replace(/\/+$/, "").startsWith("/pro");
+}
+
+export function redirectToConsent(path = CONSENT_PATH): void {
   if (typeof window === "undefined") return;
   if (isConsentExempt(window.location.pathname)) return;
   const next = window.location.pathname + window.location.search;
-  window.location.href = `${CONSENT_PATH}?next=${encodeURIComponent(next)}`;
+  window.location.href = `${path}?next=${encodeURIComponent(next)}`;
 }

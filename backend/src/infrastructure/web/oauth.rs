@@ -7,7 +7,7 @@
 //! Access tokens minted here are the exact same JWT shape as
 //! `/marchands/connexion` (see `MerchantAuthUseCases::mint_token`), just
 //! shorter-lived (1h, refreshable) - `/mcp` and every REST handler that
-//! accepts `AuthenticatedMerchant` need no changes to accept either.
+//! accepts `ConsentedMerchant` need no changes to accept either.
 //!
 //! Repris du pattern "mcp-oauth-maison" d'Elevia
 //! (https://github.com/gilmry/elevia).

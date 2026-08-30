@@ -4,7 +4,7 @@
 //! Single `POST /mcp` endpoint speaking JSON-RPC 2.0 over the MCP
 //! "Streamable HTTP" transport, stateless (every request re-authenticates
 //! via the same `Authorization: Bearer <JWT>` header the REST API already
-//! uses, through the existing `AuthenticatedMerchant` extractor - no
+//! uses, through the existing `ConsentedMerchant` extractor - no
 //! separate session/OAuth flow at this layer). Read AND write: every tool
 //! reuses an existing use case exactly as the REST handlers do (same
 //! ownership checks, same validation), so there is no new business logic
@@ -25,7 +25,7 @@ use crate::application::use_cases::{
     DashboardError, MerchantAuthError, ProductError, ReservationError,
 };
 use crate::infrastructure::web::app_state::AppState;
-use crate::infrastructure::web::middleware::AuthenticatedMerchant;
+use crate::infrastructure::web::middleware::ConsentedMerchant;
 
 const PROTOCOL_VERSION: &str = "2025-06-18";
 
@@ -92,7 +92,7 @@ impl JsonRpcResponse {
 
 pub async fn handle(
     state: web::Data<AppState>,
-    merchant: AuthenticatedMerchant,
+    merchant: ConsentedMerchant,
     body: web::Json<JsonRpcRequest>,
 ) -> HttpResponse {
     let req = body.into_inner();
@@ -167,7 +167,7 @@ fn produit_fields() -> Value {
 
 /// Every tool this server exposes. Unlike `tools/list` filtering by role in
 /// Elevia (where several account types exist), every MCP client here
-/// connects as a single marchand (see `AuthenticatedMerchant`), so
+/// connects as a single marchand (see `ConsentedMerchant`), so
 /// discoverability is not role-dependent - `call_tool` still re-derives
 /// `merchant.marchand_id` independently for every call, never trusting that
 /// listing a tool implies it's safe to run.
@@ -270,7 +270,7 @@ struct CodeArgs {
     code: String,
 }
 
-async fn call_tool(state: &AppState, merchant: &AuthenticatedMerchant, params: Value) -> Value {
+async fn call_tool(state: &AppState, merchant: &ConsentedMerchant, params: Value) -> Value {
     let params: ToolCallParams = match serde_json::from_value(params) {
         Ok(p) => p,
         Err(_) => return error_result("invalid tool call params: expected { name, arguments }"),

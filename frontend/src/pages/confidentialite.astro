@@ -129,6 +129,33 @@ const contactEmail = import.meta.env.PUBLIC_LEGAL_CONTACT_EMAIL ?? "gilmry@gmail
         distance, puis elle est oubliée.
       </p>
 
+      <p><strong>Si vous êtes commerçant partenaire</strong></p>
+      <p>
+        Un compte professionnel expose davantage, et publiquement. Sont
+        affichés sur le catalogue et sur la carte, visibles de tous :
+      </p>
+      <ul>
+        <li>Le nom et la catégorie de votre commerce.</li>
+        <li>Son adresse postale.</li>
+        <li>
+          Sa position GPS, si et seulement si vous l'avez autorisée depuis
+          votre navigateur à l'inscription. C'est facultatif : un refus
+          n'empêche pas d'utiliser le service, votre commerce n'apparaît
+          simplement pas sur la carte.
+        </li>
+        <li>Le logo ou la photo que vous choisissez de téléverser.</li>
+        <li>
+          Vos paniers publiés et les réservations qu'ils reçoivent.
+        </li>
+      </ul>
+      <p>
+        Pour un commerçant exerçant en personne physique, le nom et l'adresse
+        du commerce sont des données personnelles : c'est pourquoi votre
+        inscription passe, elle aussi, par une case à cocher explicite. Si
+        vous retirez votre consentement, vos paniers encore en ligne sont
+        retirés de la carte et votre compte est anonymisé dans la foulée.
+      </p>
+
       <p><strong>Journaux techniques et de sécurité</strong></p>
       <p>
         Le serveur qui héberge DernièreChance conserve des journaux
@@ -160,9 +187,10 @@ const contactEmail = import.meta.env.PUBLIC_LEGAL_CONTACT_EMAIL ?? "gilmry@gmail
       <h2>Combien de temps nous les gardons</h2>
       <ul>
         <li>
-          <strong>Compte et données d'usage</strong> : pendant toute la durée
-          du programme bêta. À sa clôture, tous les comptes de testeurs sont
-          supprimés ou anonymisés dans un délai d'un mois.
+          <strong>Compte et données d'usage</strong> (client comme
+          commerçant) : pendant toute la durée du programme bêta. À sa
+          clôture, tous les comptes de testeurs sont supprimés ou anonymisés
+          dans un délai d'un mois.
         </li>
         <li>
           <strong>Preuve du consentement</strong> : trois ans après le retrait
@@ -189,7 +217,8 @@ const contactEmail = import.meta.env.PUBLIC_LEGAL_CONTACT_EMAIL ?? "gilmry@gmail
       </ul>
       <p>
         Si vous retirez votre consentement, votre compte est anonymisé
-        immédiatement, sans attendre ces échéances.
+        immédiatement, sans attendre ces échéances. Pour un commerçant, ses
+        paniers encore publiés quittent la carte au même instant.
       </p>
     </div>
 
@@ -235,7 +264,11 @@ const contactEmail = import.meta.env.PUBLIC_LEGAL_CONTACT_EMAIL ?? "gilmry@gmail
           <strong>Retrait du consentement</strong> : mettre fin à votre
           participation au programme bêta, ce qui déclenche automatiquement
           l'anonymisation de votre compte. C'est immédiat et sans démarche,
-          depuis <a href="/consentement">la page Programme bêta</a>.
+          depuis <a href="/consentement">la page Programme bêta</a> pour un
+          client, ou <a href="/pro/consentement">son équivalent professionnel</a>
+          pour un commerçant. La même page permet de faire effacer son compte
+          <strong>sans jamais avoir consenti</strong> : refuser ne doit pas
+          vous laisser avec un compte inutilisable.
         </li>
         <li>
           <strong>Limitation et opposition</strong> : demander le gel d'un

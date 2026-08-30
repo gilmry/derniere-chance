@@ -135,6 +135,21 @@ impl ProductRepository for PostgresProductRepository {
         Ok(count)
     }
 
+    async fn unpublish_all_by_merchant(&self, marchand_id: Uuid) -> Result<u64, RepoError> {
+        // `expire` plutôt que `ecoule` : le panier n'a pas trouvé preneur, il
+        // a été retiré de la vente. Les réservations déjà passées gardent
+        // leur propre statut et ne sont pas touchées.
+        sqlx::query(
+            "UPDATE produits SET statut = 'expire'
+              WHERE marchand_id = $1 AND statut = 'publie'",
+        )
+        .bind(marchand_id)
+        .execute(&self.pool)
+        .await
+        .map(|result| result.rows_affected())
+        .map_err(Into::into)
+    }
+
     async fn update_status(&self, id: Uuid, statut: ProductStatus) -> Result<Product, RepoError> {
         let query = format!(
             "UPDATE produits SET statut = $2 WHERE id = $1 RETURNING {PRODUCT_COLUMNS}"

@@ -23,6 +23,11 @@ pub struct RegisterMerchantRequest {
     /// l'inscription - optionnelle (refus possible), voir VISION.md §8.
     pub latitude: Option<f64>,
     pub longitude: Option<f64>,
+    /// Version du texte de consentement bêta cochée à l'inscription. Champ
+    /// obligatoire, comme pour un consommateur : nom, adresse et position
+    /// d'un commerçant en personne physique sont des données personnelles,
+    /// et elles sont publiées sur la carte.
+    pub consent_version: String,
 }
 
 #[derive(Debug, Deserialize)]

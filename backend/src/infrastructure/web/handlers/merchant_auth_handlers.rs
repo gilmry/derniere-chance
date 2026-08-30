@@ -6,7 +6,7 @@ use crate::infrastructure::web::app_state::AppState;
 use crate::infrastructure::web::handlers::responses::{
     conflict, internal_error, not_found, unauthorized,
 };
-use crate::infrastructure::web::middleware::AuthenticatedMerchant;
+use crate::infrastructure::web::middleware::ConsentedMerchant;
 
 pub async fn register(
     state: web::Data<AppState>,
@@ -15,6 +15,9 @@ pub async fn register(
     match state.merchant_auth_use_cases.register(dto.into_inner()).await {
         Ok(response) => HttpResponse::Created().json(response),
         Err(MerchantAuthError::EmailTaken) => conflict("an account already exists for this email"),
+        Err(MerchantAuthError::StaleConsentVersion) => conflict(
+            "la politique de confidentialité a changé, recharge la page avant de t'inscrire",
+        ),
         Err(err) => {
             tracing::error!(?err, "merchant register failed");
             internal_error()
@@ -37,7 +40,7 @@ pub async fn login(state: web::Data<AppState>, dto: web::Json<LoginRequest>) -> 
     }
 }
 
-pub async fn me(state: web::Data<AppState>, merchant: AuthenticatedMerchant) -> HttpResponse {
+pub async fn me(state: web::Data<AppState>, merchant: ConsentedMerchant) -> HttpResponse {
     match state
         .merchant_auth_use_cases
         .get_own_profile(merchant.marchand_id)
@@ -54,7 +57,7 @@ pub async fn me(state: web::Data<AppState>, merchant: AuthenticatedMerchant) -> 
 
 pub async fn update_me(
     state: web::Data<AppState>,
-    merchant: AuthenticatedMerchant,
+    merchant: ConsentedMerchant,
     dto: web::Json<UpdateMerchantDto>,
 ) -> HttpResponse {
     match state

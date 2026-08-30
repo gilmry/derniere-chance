@@ -9,7 +9,7 @@ use crate::application::ports::{
     ConsentRepository, ConsumerRepository, EventNotifier, NewConsumer, RepoError,
 };
 use crate::application::use_cases::BETA_CONSENT_VERSION;
-use crate::domain::entities::Consumer;
+use crate::domain::entities::{ConsentSubject, Consumer};
 
 #[derive(Debug, Error)]
 pub enum ConsumerAuthError {
@@ -91,7 +91,7 @@ impl ConsumerAuthUseCases {
         // Enregistré avant la notification : annoncer une inscription qui
         // serait ensuite bloquée faute de consentement induirait en erreur.
         self.consent_repo
-            .grant(consumer.id, BETA_CONSENT_VERSION)
+            .grant(ConsentSubject::Consumer(consumer.id), BETA_CONSENT_VERSION)
             .await?;
 
         self.event_notifier

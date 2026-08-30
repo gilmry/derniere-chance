@@ -17,4 +17,7 @@ pub struct Merchant {
     pub longitude: Option<f64>,
     pub logo_url: Option<String>,
     pub created_at: DateTime<Utc>,
+    /// Renseigné quand le marchand a retiré son consentement bêta : nom,
+    /// adresse et position ne valent alors plus que des espaces réservés.
+    pub anonymise_le: Option<DateTime<Utc>>,
 }

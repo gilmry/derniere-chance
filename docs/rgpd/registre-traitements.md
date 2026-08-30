@@ -41,10 +41,16 @@ Finalité technique associée, distincte par sa base légale (voir plus bas) :
 **Consentement explicite** (art. 6.1.a), recueilli par une case à cocher non
 pré-cochée à l'inscription, distincte de toute autre acceptation.
 
+Recueilli auprès des **deux principaux** : testeurs consommateurs et
+commerçants partenaires. Un commerçant publie nom, adresse et position de son
+commerce sur la carte publique ; exercé en personne physique, ce sont ses
+données personnelles, et elles justifient le même acte explicite.
+
 Traçabilité : chaque acte de consentement est enregistré dans la table
-`consentements_beta` (`consommateur_id`, `version` du texte accepté,
-`accepte_le`, `retire_le`). Aucune ligne n'est écrasée ; le retrait est
-horodaté en place. Un changement de fond du texte produit une nouvelle version
+`consentements_beta` (`consommateur_id` **ou** `marchand_id`, exclusifs l'un
+de l'autre par contrainte `consentement_un_seul_sujet` ; `version` du texte
+accepté, `accepte_le`, `retire_le`). Aucune ligne n'est écrasée ; le retrait
+est horodaté en place. Un changement de fond du texte produit une nouvelle version
 et l'accord est redemandé avant tout accès (constante `BETA_CONSENT_VERSION`,
 côté backend et frontend).
 
@@ -65,11 +71,13 @@ du consentement, ne servent qu'à cette fin, et leur conservation est bornée à
 
 | Catégorie | Données | Où |
 |---|---|---|
-| Identification | Adresse email, empreinte bcrypt du mot de passe, date de création | `consommateurs` |
-| Consentement | Version acceptée, date d'acceptation, date de retrait | `consentements_beta` |
+| Identification (client) | Adresse email, empreinte bcrypt du mot de passe, date de création | `consommateurs` |
+| Identification (commerçant) | Nom et catégorie du commerce, adresse postale, position GPS (facultative), logo, email, empreinte bcrypt | `marchands` |
+| Consentement | Sujet (client ou commerçant), version acceptée, date d'acceptation, date de retrait | `consentements_beta` |
 | Usage | Commerçants suivis | `abonnements` |
 | Usage | Réservations : panier, code de retrait, statut, date | `reservations` |
 | Usage | Notifications envoyées et leur statut | `notifications` |
+| Usage (commerçant) | Paniers publiés, prix, fenêtres de retrait, photos | `produits` |
 | Techniques | Adresses IP, dates, chemins et codes de réponse HTTP | Journaux applicatifs (conteneurs Docker) |
 | Sécurité | Adresses IP, signatures d'attaque, bannissements | Suricata, CrowdSec, Fail2ban, journal système |
 | Intégrité système | Empreintes de fichiers du serveur (aucune donnée personnelle) | AIDE |
@@ -77,16 +85,25 @@ du consentement, ne servent qu'à cette fin, et leur conservation est bornée à
 **Aucune donnée sensible** au sens de l'article 9 n'est collectée. Aucun
 mineur n'est visé. Aucune décision automatisée ni profilage (art. 22).
 
-**Géolocalisation** : la position du consommateur n'est **jamais enregistrée**.
-Transmise en paramètre de requête si le navigateur l'autorise, elle sert au
-calcul d'une distance puis disparaît avec la requête. Seule la position d'un
-commerçant, facultative et fournie par lui, est stockée (`marchands`).
+**Géolocalisation** : la position du consommateur n'est **jamais
+enregistrée**. Transmise en paramètre de requête si le navigateur l'autorise,
+elle sert au calcul d'une distance puis disparaît avec la requête. Seule la
+position d'un commerçant est stockée (`marchands.latitude/longitude`) :
+facultative, fournie par lui à l'inscription via `navigator.geolocation`, et
+publiée sur la carte. Un refus n'empêche pas d'utiliser le service, le
+commerce n'apparaît simplement pas sur la carte.
+
+Il s'agit d'une position **fixe de point de vente**, saisie une fois, et non
+d'un suivi de déplacement : ni surveillance systématique, ni traçage de
+personnes. C'est ce qui distingue ce traitement de la « géolocalisation à
+grande échelle » qui déclencherait une AIPD.
 
 ### Durées de conservation
 
 | Donnée | Durée | Mécanisme |
 |---|---|---|
-| Compte et données d'usage | Durée du programme bêta, puis suppression ou anonymisation sous 1 mois | Manuel à la clôture du bêta |
+| Compte et données d'usage (client et commerçant) | Durée du programme bêta, puis suppression ou anonymisation sous 1 mois | Manuel à la clôture du bêta |
+| Paniers publiés | Dépubliés immédiatement au retrait du consentement du commerçant | `ProductRepository::unpublish_all_by_merchant` |
 | Preuve du consentement | 3 ans après retrait ou clôture du programme | Table `consentements_beta`, sans donnée identifiante après anonymisation du compte |
 | Réservations | 12 mois (statistiques commerçants), détachées de l'identité dès l'anonymisation | Anonymisation du compte |
 | Journaux applicatifs | Bornés à 50 Mo par service (~quelques semaines au rythme du bêta) | `logging.max-size`/`max-file` dans `docker-compose.yml` |
@@ -119,9 +136,11 @@ d'outil de mesure d'audience.
 - Mots de passe stockés uniquement sous forme d'empreinte bcrypt.
 - Authentification par JWT signé, avec vérification du rôle : un jeton
   consommateur ne peut pas authentifier un endpoint marchand ou admin.
-- Portier de consentement (`ConsentedConsumer`) : tout endpoint traitant des
-  données de consommateur exige un consentement à jour, de sorte qu'un nouvel
-  endpoint est fermé par défaut. Le portier interroge la base à chaque appel,
+- Portiers de consentement (`ConsentedConsumer`, `ConsentedMerchant`) : tout
+  endpoint traitant des données d'un testeur exige un consentement à jour, de
+  sorte qu'un nouvel endpoint est fermé par défaut. Le portier marchand
+  couvre aussi `/mcp`, pour qu'un compte piloté depuis un client MCP ne
+  contourne pas le retrait. Les portiers interrogent la base à chaque appel,
   pour qu'un retrait prenne effet immédiatement plutôt qu'à l'expiration du
   jeton.
 - Base de données sur un réseau Docker interne, sans port exposé.
@@ -149,26 +168,39 @@ d'outil de mesure d'audience.
 Accès, rectification, effacement, limitation, opposition et portabilité
 s'exercent par email à gilmry@gmail.com, avec réponse sous un mois.
 
+Le même écran permet de faire effacer son compte **sans avoir jamais
+consenti** : un testeur inscrit avant la mise en place du consentement, ou qui
+refuse une nouvelle version du texte, doit pouvoir partir plutôt que rester
+coincé derrière le portier. C'est pourquoi les endpoints de consentement sont
+les seuls endpoints authentifiés qui ne passent pas par les portiers.
+
 Le **retrait du consentement** est automatisé et immédiat, sans démarche :
 depuis `/consentement`, il déclenche l'anonymisation du compte
 (`ConsentUseCases::withdraw`). L'email et l'empreinte du mot de passe sont
 remplacés par des valeurs neutres, la reconnexion devient impossible et
 l'accès applicatif est refermé.
 
+Pour un commerçant, le retrait passe par `/pro/consentement` et produit deux
+effets : ses paniers encore publiés sont dépubliés (ils quittent la carte), et
+nom, adresse, position, logo et email sont remplacés par des valeurs neutres.
+
 Le compte est **anonymisé plutôt que supprimé** : effacer la ligne
-`consommateurs` supprimerait par cascade la preuve du consentement, que
-l'article 7 §1 impose de pouvoir produire, ainsi que les réservations déjà
-honorées par les commerçants. Une fois anonymisée, la ligne ne contient plus
+`consommateurs` ou `marchands` supprimerait par cascade la preuve du
+consentement, que l'article 7 §1 impose de pouvoir produire, ainsi que les
+réservations déjà honorées. Une fois anonymisée, la ligne ne contient plus
 aucune donnée personnelle. Une suppression pure et simple reste possible à la
 demande, par le backoffice admin.
 
 ### Analyse d'impact (AIPD)
 
-Non requise : le traitement ne figure dans aucune des catégories de la liste
-de l'APD imposant une AIPD, il ne porte ni sur des données sensibles, ni sur
-une surveillance systématique à grande échelle, ni sur des personnes
-vulnérables, et le nombre de testeurs reste réduit. À réévaluer avant toute
-ouverture au public.
+**Non requise.** Le screening qui l'établit est documenté à part, avec les
+neuf critères du CEPD passés un par un et les évolutions produit qui
+obligeraient à le refaire : [`pre-analyse-aipd.md`](./pre-analyse-aipd.md).
+
+Un point d'attention y est traité en détail, parce que c'est le seul qui
+approche un déclencheur : la géolocalisation. Elle ne fait pas basculer le
+traitement, la position du consommateur n'étant jamais conservée et celle du
+marchand étant un point de vente fixe, non une trajectoire.
 
 ---
 
@@ -177,3 +209,4 @@ ouverture au public.
 | Date | Modification |
 |---|---|
 | 2026-08-30 | Création du registre. Mise en conformité initiale du programme bêta : consentement explicite tracé, retrait automatisé avec anonymisation, politique de confidentialité publiée, rétention des journaux bornée à 30 jours. |
+| 2026-08-30 | Extension du consentement aux commerçants partenaires (nom, adresse et position publiés sur la carte). Retrait côté marchand : dépublication des paniers puis anonymisation. Portier étendu à tous les endpoints marchand, `/mcp` compris. |

@@ -29,6 +29,12 @@ test("marchand publie, consommateur réserve, marchand valide, admin nettoie", a
     await page.getByRole("combobox").selectOption("Boulangerie");
     await page.getByPlaceholder("Email professionnel").fill(MERCHANT_EMAIL);
     await page.getByPlaceholder("Mot de passe").fill(PASSWORD);
+    // Consentement bêta marchand : case obligatoire et jamais pré-cochée. Un
+    // commerçant publie nom, adresse et position sur la carte, d'où le même
+    // acte explicite que côté client (docs/rgpd/registre-traitements.md).
+    const merchantConsent = page.getByRole("checkbox");
+    await expect(merchantConsent).not.toBeChecked();
+    await merchantConsent.check();
     await page.getByRole("button", { name: "Créer mon compte marchand" }).click();
     await page.waitForURL("**/pro/dashboard");
     await expect(page.getByRole("heading", { name: "Aujourd'hui" })).toBeVisible();

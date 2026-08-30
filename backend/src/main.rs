@@ -82,6 +82,7 @@ async fn main() -> std::io::Result<()> {
 
     let merchant_auth_use_cases = Arc::new(MerchantAuthUseCases::new(
         merchant_repo.clone(),
+        consent_repo.clone(),
         jwt_secret.clone(),
         event_notifier.clone(),
     ));
@@ -95,7 +96,12 @@ async fn main() -> std::io::Result<()> {
             event_notifier.clone(),
         )),
         admin_auth_use_cases: Arc::new(AdminAuthUseCases::new(admin_repo, jwt_secret)),
-        consent_use_cases: Arc::new(ConsentUseCases::new(consent_repo, consumer_repo.clone())),
+        consent_use_cases: Arc::new(ConsentUseCases::new(
+            consent_repo,
+            consumer_repo.clone(),
+            merchant_repo.clone(),
+            product_repo.clone(),
+        )),
         admin_use_cases,
         catalog_use_cases: Arc::new(CatalogUseCases::new(
             product_repo.clone(),

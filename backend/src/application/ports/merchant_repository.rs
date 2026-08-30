@@ -30,6 +30,11 @@ pub trait MerchantRepository: Send + Sync {
     /// Backoffice admin uniquement - cascade sur produits/abonnements
     /// (ON DELETE CASCADE), donc sur réservations/notifications par ricochet.
     async fn delete(&self, id: Uuid) -> Result<(), RepoError>;
+    /// Retrait du consentement bêta : efface le nom, l'adresse, la position
+    /// et le logo - tout ce qui était publié sur la carte - et rend la
+    /// connexion impossible, sans supprimer la ligne. Les paniers déjà
+    /// retirés par des clients y restent rattachés. Idempotent.
+    async fn anonymize(&self, id: Uuid) -> Result<(), RepoError>;
     async fn count(&self) -> Result<i64, RepoError>;
     async fn update_logo(&self, id: Uuid, logo_url: &str) -> Result<Merchant, RepoError>;
     async fn update(&self, id: Uuid, changes: MerchantUpdate) -> Result<Merchant, RepoError>;

@@ -36,7 +36,7 @@ pub fn configure_routes(cfg: &mut web::ServiceConfig) {
             "/consommateurs/connexion",
             web::post().to(handlers::consumer_auth::login),
         )
-        // Marchand backoffice (auth: marchand)
+        // Marchand backoffice (auth: marchand + consentement bêta)
         .route("/marchands/moi", web::get().to(handlers::merchant_auth::me))
         .route(
             "/marchands/moi",
@@ -74,19 +74,31 @@ pub fn configure_routes(cfg: &mut web::ServiceConfig) {
             "/marchands/moi/reservations/{code}/valider",
             web::post().to(handlers::validate_pickup),
         )
-        // Consentement au programme bêta (auth: consommateur, PAS de portier
-        // de consentement - c'est ici qu'on le donne ou le retire).
+        // Consentement au programme bêta. Seuls endpoints authentifiés SANS
+        // portier de consentement : c'est ici qu'on le donne ou le retire.
         .route(
             "/consommateurs/moi/consentement",
-            web::get().to(handlers::consent::status),
+            web::get().to(handlers::consent::consumer_status),
         )
         .route(
             "/consommateurs/moi/consentement",
-            web::post().to(handlers::consent::grant),
+            web::post().to(handlers::consent::consumer_grant),
         )
         .route(
             "/consommateurs/moi/consentement",
-            web::delete().to(handlers::consent::withdraw),
+            web::delete().to(handlers::consent::consumer_withdraw),
+        )
+        .route(
+            "/marchands/moi/consentement",
+            web::get().to(handlers::consent::merchant_status),
+        )
+        .route(
+            "/marchands/moi/consentement",
+            web::post().to(handlers::consent::merchant_grant),
+        )
+        .route(
+            "/marchands/moi/consentement",
+            web::delete().to(handlers::consent::merchant_withdraw),
         )
         // Consommateur account (auth: consommateur + consentement bêta)
         .route(

@@ -2,11 +2,11 @@ use actix_web::{web, HttpResponse};
 
 use crate::infrastructure::web::app_state::AppState;
 use crate::infrastructure::web::handlers::responses::internal_error;
-use crate::infrastructure::web::middleware::{AuthenticatedMerchant, ConsentedConsumer};
+use crate::infrastructure::web::middleware::{ConsentedConsumer, ConsentedMerchant};
 
 pub async fn merchant_today(
     state: web::Data<AppState>,
-    merchant: AuthenticatedMerchant,
+    merchant: ConsentedMerchant,
 ) -> HttpResponse {
     match state.dashboard_use_cases.merchant_today(merchant.marchand_id).await {
         Ok(stats) => HttpResponse::Ok().json(stats),

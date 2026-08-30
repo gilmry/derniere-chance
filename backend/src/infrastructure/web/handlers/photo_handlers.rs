@@ -3,7 +3,7 @@ use actix_web::{web, HttpResponse};
 
 use crate::infrastructure::web::app_state::AppState;
 use crate::infrastructure::web::handlers::responses::{bad_request, internal_error};
-use crate::infrastructure::web::middleware::AuthenticatedMerchant;
+use crate::infrastructure::web::middleware::ConsentedMerchant;
 
 const MAX_PHOTO_BYTES: usize = 5 * 1024 * 1024; // 5 Mo
 
@@ -55,7 +55,7 @@ async fn read_validated_photo(form: &PhotoUploadForm) -> Result<(Vec<u8>, String
 /// publique, à réutiliser comme `photo_url` dans `POST /marchands/moi/produits`.
 pub async fn upload_photo(
     state: web::Data<AppState>,
-    _merchant: AuthenticatedMerchant,
+    _merchant: ConsentedMerchant,
     MultipartForm(form): MultipartForm<PhotoUploadForm>,
 ) -> HttpResponse {
     let (bytes, content_type, extension) = match read_validated_photo(&form).await {
@@ -80,7 +80,7 @@ pub async fn upload_photo(
 /// marchand et renvoie l'URL publique.
 pub async fn upload_logo(
     state: web::Data<AppState>,
-    merchant: AuthenticatedMerchant,
+    merchant: ConsentedMerchant,
     MultipartForm(form): MultipartForm<PhotoUploadForm>,
 ) -> HttpResponse {
     let (bytes, content_type, extension) = match read_validated_photo(&form).await {

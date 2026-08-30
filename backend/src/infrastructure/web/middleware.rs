@@ -9,6 +9,7 @@ use std::pin::Pin;
 use thiserror::Error as ThisError;
 use uuid::Uuid;
 
+use crate::domain::entities::ConsentSubject;
 use crate::infrastructure::web::app_state::AppState;
 
 fn bearer_token(req: &HttpRequest) -> Result<&str, Error> {
@@ -31,28 +32,29 @@ pub struct AuthenticatedMerchant {
     pub email: String,
 }
 
+fn verify_merchant(req: &HttpRequest) -> Result<AuthenticatedMerchant, Error> {
+    let app_state = req
+        .app_data::<web::Data<AppState>>()
+        .ok_or_else(|| ErrorUnauthorized("internal server error"))?;
+    let token = bearer_token(req)?;
+
+    let claims = app_state
+        .merchant_auth_use_cases
+        .verify_token(token)
+        .map_err(|_| ErrorUnauthorized("invalid or expired token"))?;
+
+    Ok(AuthenticatedMerchant {
+        marchand_id: claims.sub,
+        email: claims.email,
+    })
+}
+
 impl FromRequest for AuthenticatedMerchant {
     type Error = Error;
     type Future = Ready<Result<Self, Self::Error>>;
 
     fn from_request(req: &HttpRequest, _payload: &mut Payload) -> Self::Future {
-        let app_state = match req.app_data::<web::Data<AppState>>() {
-            Some(state) => state,
-            None => return ready(Err(ErrorUnauthorized("internal server error"))),
-        };
-
-        let token = match bearer_token(req) {
-            Ok(t) => t,
-            Err(err) => return ready(Err(err)),
-        };
-
-        match app_state.merchant_auth_use_cases.verify_token(token) {
-            Ok(claims) => ready(Ok(AuthenticatedMerchant {
-                marchand_id: claims.sub,
-                email: claims.email,
-            })),
-            Err(_) => ready(Err(ErrorUnauthorized("invalid or expired token"))),
-        }
+        ready(verify_merchant(req))
     }
 }
 
@@ -135,27 +137,66 @@ impl FromRequest for ConsentedConsumer {
 
     fn from_request(req: &HttpRequest, _payload: &mut Payload) -> Self::Future {
         let consumer = verify_consumer(req);
-        let consent_use_cases = req
-            .app_data::<web::Data<AppState>>()
-            .map(|state| state.consent_use_cases.clone());
+        let state = req.app_data::<web::Data<AppState>>().cloned();
 
         Box::pin(async move {
             let consumer = consumer?;
-            let use_cases =
-                consent_use_cases.ok_or_else(|| ErrorUnauthorized("internal server error"))?;
-
-            match use_cases.has_current_consent(consumer.consommateur_id).await {
-                Ok(true) => Ok(ConsentedConsumer {
-                    consommateur_id: consumer.consommateur_id,
-                    email: consumer.email,
-                }),
-                Ok(false) => Err(ConsentRequired.into()),
-                Err(err) => {
-                    tracing::error!(?err, "consent check failed");
-                    Err(ErrorInternalServerError("internal error"))
-                }
-            }
+            require_consent(state, ConsentSubject::Consumer(consumer.consommateur_id)).await?;
+            Ok(ConsentedConsumer {
+                consommateur_id: consumer.consommateur_id,
+                email: consumer.email,
+            })
         })
+    }
+}
+
+/// Marchand authentifié **et** couvert par un consentement bêta à jour.
+///
+/// Le pendant de `ConsentedConsumer` côté professionnel, et il pèse plus
+/// lourd : un marchand confie son nom commercial, son adresse postale et sa
+/// position GPS, toutes publiées sur la carte publique. Tous les endpoints
+/// marchand passent par lui, y compris `/mcp` - un compte piloté depuis un
+/// client MCP ne doit pas contourner le retrait de consentement.
+#[derive(Debug, Clone)]
+pub struct ConsentedMerchant {
+    pub marchand_id: Uuid,
+    pub email: String,
+}
+
+impl FromRequest for ConsentedMerchant {
+    type Error = Error;
+    type Future = Pin<Box<dyn Future<Output = Result<Self, Self::Error>>>>;
+
+    fn from_request(req: &HttpRequest, _payload: &mut Payload) -> Self::Future {
+        let merchant = verify_merchant(req);
+        let state = req.app_data::<web::Data<AppState>>().cloned();
+
+        Box::pin(async move {
+            let merchant = merchant?;
+            require_consent(state, ConsentSubject::Merchant(merchant.marchand_id)).await?;
+            Ok(ConsentedMerchant {
+                marchand_id: merchant.marchand_id,
+                email: merchant.email,
+            })
+        })
+    }
+}
+
+/// Cœur commun aux deux portiers : refuse l'accès tant que le sujet n'a pas
+/// de consentement portant sur la version en vigueur.
+async fn require_consent(
+    state: Option<web::Data<AppState>>,
+    subject: ConsentSubject,
+) -> Result<(), Error> {
+    let state = state.ok_or_else(|| ErrorUnauthorized("internal server error"))?;
+
+    match state.consent_use_cases.has_current_consent(subject).await {
+        Ok(true) => Ok(()),
+        Ok(false) => Err(ConsentRequired.into()),
+        Err(err) => {
+            tracing::error!(?err, role = subject.role(), "consent check failed");
+            Err(ErrorInternalServerError("internal error"))
+        }
     }
 }
 

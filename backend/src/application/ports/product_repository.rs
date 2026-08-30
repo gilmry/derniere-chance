@@ -71,6 +71,11 @@ pub trait ProductRepository: Send + Sync {
     async fn list_all(&self) -> Result<Vec<ProductWithMerchant>, RepoError>;
     /// Backoffice admin uniquement.
     async fn delete(&self, id: Uuid) -> Result<(), RepoError>;
+    /// Dépublie d'un coup tous les paniers encore publiés d'un marchand.
+    /// Utilisé au retrait de son consentement : ses offres ne peuvent pas
+    /// rester sur la carte alors qu'il a quitté le programme. Renvoie le
+    /// nombre de paniers retirés.
+    async fn unpublish_all_by_merchant(&self, marchand_id: Uuid) -> Result<u64, RepoError>;
     async fn count_active(&self) -> Result<i64, RepoError>;
     async fn update_status(
         &self,

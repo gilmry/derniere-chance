@@ -2,7 +2,12 @@
 // mock.ts au fur et à mesure du branchement (voir VISION.md).
 
 import type { Coords } from "./geoloc";
-import { BETA_CONSENT_VERSION, redirectToConsent } from "./consent";
+import {
+  BETA_CONSENT_VERSION,
+  CONSENT_PATH,
+  MERCHANT_CONSENT_PATH,
+  redirectToConsent,
+} from "./consent";
 
 const API_URL = import.meta.env.PUBLIC_API_URL ?? "http://localhost:8080";
 
@@ -64,7 +69,9 @@ async function apiFetch<T>(
       ? String((data as { code: unknown }).code)
       : undefined;
     if (res.status === 403 && code === "consentement_requis") {
-      redirectToConsent();
+      // Le chemin appelé dit de quel principal il s'agit, donc vers quel
+      // écran renvoyer : les deux consentements sont distincts.
+      redirectToConsent(path.startsWith("/marchands/") ? MERCHANT_CONSENT_PATH : CONSENT_PATH);
       throw new ConsentRequiredError(message);
     }
 
@@ -199,6 +206,10 @@ export function getMerchantProfile(id: string, coords?: Coords | null): Promise<
 
 // --- Auth marchand ---
 
+/// Comme pour un consommateur, l'inscription porte le consentement bêta : le
+/// backend refuse la requête si la version envoyée n'est pas celle en
+/// vigueur. Le marchand publie nom, adresse et position sur la carte, donc la
+/// case cochée l'engage sur davantage.
 export function merchantRegister(dto: {
   nom: string;
   adresse: string;
@@ -208,7 +219,10 @@ export function merchantRegister(dto: {
   latitude?: number | null;
   longitude?: number | null;
 }): Promise<AuthResponse> {
-  return apiFetch("/marchands/inscription", { method: "POST", body: dto });
+  return apiFetch("/marchands/inscription", {
+    method: "POST",
+    body: { ...dto, consent_version: BETA_CONSENT_VERSION },
+  });
 }
 
 export function merchantLogin(email: string, password: string): Promise<AuthResponse> {
@@ -252,12 +266,28 @@ export interface ConsentStatus {
   version_courante: string;
 }
 
-export function consentStatus(token: string): Promise<ConsentStatus> {
-  return apiFetch("/consommateurs/moi/consentement", { token });
+/// Les deux principaux ont le même circuit de consentement, sur deux chemins
+/// distincts parce que leurs jetons ne sont pas interchangeables.
+export type ConsentRole = "consommateur" | "marchand";
+
+function consentPath(role: ConsentRole): string {
+  return role === "marchand"
+    ? "/marchands/moi/consentement"
+    : "/consommateurs/moi/consentement";
 }
 
-export function grantConsent(token: string): Promise<ConsentStatus> {
-  return apiFetch("/consommateurs/moi/consentement", {
+export function consentStatus(
+  token: string,
+  role: ConsentRole = "consommateur",
+): Promise<ConsentStatus> {
+  return apiFetch(consentPath(role), { token });
+}
+
+export function grantConsent(
+  token: string,
+  role: ConsentRole = "consommateur",
+): Promise<ConsentStatus> {
+  return apiFetch(consentPath(role), {
     method: "POST",
     body: { consent_version: BETA_CONSENT_VERSION },
     token,
@@ -266,8 +296,11 @@ export function grantConsent(token: string): Promise<ConsentStatus> {
 
 /// Retire le consentement et anonymise le compte côté serveur. Le jeton
 /// local devient inutilisable : l'appelant doit le purger.
-export function withdrawConsent(token: string): Promise<void> {
-  return apiFetch("/consommateurs/moi/consentement", { method: "DELETE", token });
+export function withdrawConsent(
+  token: string,
+  role: ConsentRole = "consommateur",
+): Promise<void> {
+  return apiFetch(consentPath(role), { method: "DELETE", token });
 }
 
 // --- Actions consommateur (auth requise) ---
@@ -408,6 +441,9 @@ export interface AdminMerchant {
   longitude: number | null;
   logo_url: string | null;
   created_at: string;
+  /// Renseigné après retrait du consentement bêta : nom, adresse et position
+  /// ne sont alors plus que des espaces réservés.
+  anonymise_le: string | null;
 }
 
 export interface AdminConsumer {

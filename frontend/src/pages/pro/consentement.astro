@@ -1,0 +1,11 @@
+---
+// Pendant marchand de /consentement. Même composant, même circuit : seuls
+// les données en jeu (nom, adresse, position publiés sur la carte) et
+// l'espace de retour diffèrent.
+import AppLayout from "../../layouts/AppLayout.astro";
+import BetaConsent from "../../components/BetaConsent.svelte";
+---
+
+<AppLayout title="Programme bêta">
+  <BetaConsent client:load role="marchand" />
+</AppLayout>
