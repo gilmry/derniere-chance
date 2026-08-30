@@ -1,9 +1,10 @@
 # Notifications par email (n8n)
 
-DernièreChance notifie un webhook pour trois événements notables :
-inscription d'un marchand, nouvelle réservation, panier récupéré au
-retrait (voir `backend/src/infrastructure/notifications/webhook_notifier.rs`
-et `backend/src/application/ports/event_notifier.rs`). Ce fichier documente
+DernièreChance notifie un webhook pour quatre événements notables :
+inscription d'un marchand, inscription d'un client, nouvelle réservation,
+panier récupéré au retrait (voir
+`backend/src/infrastructure/notifications/webhook_notifier.rs` et
+`backend/src/application/ports/event_notifier.rs`). Ce fichier documente
 le workflow n8n qui reçoit ces appels et envoie un email pour chacun.
 
 ## Schéma
@@ -108,9 +109,10 @@ const usageNote = sticky(
   '## Notifications DernièreChance\n\n' +
   'Webhook attend un POST JSON du backend DernièreChance avec\n' +
   '`{ "event": "...", "message": "..." }` (ex: nouvelle_reservation,\n' +
-  'nouveau_marchand, panier_recupere). Un email part pour CHAQUE appel\n' +
-  'reçu ici - le filtrage "édifiant ou pas" se fait côté backend en\n' +
-  'choisissant quand appeler ce webhook, pas dans ce workflow.\n\n' +
+  'nouveau_marchand, nouveau_consommateur, panier_recupere). Un email part\n' +
+  'pour CHAQUE appel reçu ici - le filtrage "édifiant ou pas" se fait\n' +
+  'côté backend en choisissant quand appeler ce webhook, pas dans ce\n' +
+  'workflow.\n\n' +
   "URL à configurer côté backend (variable d'env WEBHOOK_NOTIFY_URL) :\n" +
   'voir l\'onglet Webhook du trigger une fois le workflow publié.',
   [notifyWebhook, normalizeEvent, sendNotificationEmail],

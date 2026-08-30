@@ -5,7 +5,7 @@ use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation}
 use thiserror::Error;
 
 use crate::application::dto::{AuthResponse, Claims, LoginRequest, RegisterConsumerRequest};
-use crate::application::ports::{ConsumerRepository, NewConsumer, RepoError};
+use crate::application::ports::{ConsumerRepository, EventNotifier, NewConsumer, RepoError};
 use crate::domain::entities::Consumer;
 
 #[derive(Debug, Error)]
@@ -28,13 +28,19 @@ const ROLE: &str = "consommateur";
 pub struct ConsumerAuthUseCases {
     consumer_repo: Arc<dyn ConsumerRepository>,
     jwt_secret: String,
+    event_notifier: Arc<dyn EventNotifier>,
 }
 
 impl ConsumerAuthUseCases {
-    pub fn new(consumer_repo: Arc<dyn ConsumerRepository>, jwt_secret: String) -> Self {
+    pub fn new(
+        consumer_repo: Arc<dyn ConsumerRepository>,
+        jwt_secret: String,
+        event_notifier: Arc<dyn EventNotifier>,
+    ) -> Self {
         Self {
             consumer_repo,
             jwt_secret,
+            event_notifier,
         }
     }
 
@@ -61,6 +67,13 @@ impl ConsumerAuthUseCases {
                 password_hash,
             })
             .await?;
+
+        self.event_notifier
+            .notify(
+                "nouveau_consommateur",
+                format!("Nouveau client inscrit : {}", consumer.email),
+            )
+            .await;
 
         let token = self.mint_token(&consumer)?;
         Ok(AuthResponse { token })

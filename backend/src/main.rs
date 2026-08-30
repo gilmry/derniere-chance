@@ -66,8 +66,9 @@ async fn main() -> std::io::Result<()> {
 
     let photo_storage = Arc::new(PhotoStorage::from_config(PhotoStorageConfig::from_env()).await);
 
-    // n8n webhook -> email for noteworthy events (nouveau marchand, nouvelle
-    // réservation, panier récupéré). No-op if WEBHOOK_NOTIFY_URL is unset.
+    // n8n webhook -> email for noteworthy events (nouveau marchand, nouveau
+    // client, nouvelle réservation, panier récupéré). No-op if
+    // WEBHOOK_NOTIFY_URL is unset.
     let event_notifier: Arc<dyn EventNotifier> = Arc::new(WebhookNotifier::from_env());
 
     let admin_use_cases = Arc::new(AdminUseCases::new(
@@ -88,6 +89,7 @@ async fn main() -> std::io::Result<()> {
         consumer_auth_use_cases: Arc::new(ConsumerAuthUseCases::new(
             consumer_repo.clone(),
             jwt_secret.clone(),
+            event_notifier.clone(),
         )),
         admin_auth_use_cases: Arc::new(AdminAuthUseCases::new(admin_repo, jwt_secret)),
         admin_use_cases,
