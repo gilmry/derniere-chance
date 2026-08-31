@@ -15,10 +15,9 @@ use derniere_chance_api::infrastructure::database::repositories::{
     PostgresAdminRepository, PostgresAuthorizationCodeRepository, PostgresConsentRepository,
     PostgresConsumerRepository, PostgresMerchantRepository, PostgresNotificationRepository,
     PostgresOAuthClientRepository, PostgresProductRepository, PostgresRefreshTokenRepository,
-    PostgresReservationRepository,
-    PostgresSubscriptionRepository,
+    PostgresReservationRepository, PostgresSubscriptionRepository,
 };
-use derniere_chance_api::infrastructure::email::LoggingEmailSender;
+use derniere_chance_api::infrastructure::email::{LoggingEmailSender, MailjetEmailSender};
 use derniere_chance_api::infrastructure::notifications::WebhookNotifier;
 use derniere_chance_api::infrastructure::storage::{PhotoStorage, PhotoStorageConfig};
 use derniere_chance_api::infrastructure::web::{configure_routes, AppState};
@@ -61,10 +60,20 @@ async fn main() -> std::io::Result<()> {
     let oauth_code_repo = Arc::new(PostgresAuthorizationCodeRepository::new(db.clone()));
     let oauth_refresh_repo = Arc::new(PostgresRefreshTokenRepository::new(db.clone()));
 
-    // No transactional-email provider is wired up yet (see VISION.md §8) -
-    // this adapter only logs. Swap it for a Resend/SMTP implementation of
-    // `EmailSender` when that's decided.
-    let email_sender: Arc<dyn EmailSender> = Arc::new(LoggingEmailSender);
+    // Envoi réel par Mailjet dès que les clés et l'expéditeur sont renseignés.
+    // Sans eux, on retombe sur l'adaptateur qui ne fait que logguer : un poste
+    // de dev, la CI et les e2e tournent ainsi sans clé, et sans risquer
+    // d'écrire à de vraies personnes depuis un jeu de données de test.
+    let email_sender: Arc<dyn EmailSender> = match MailjetEmailSender::from_env() {
+        Some(mailjet) => Arc::new(mailjet),
+        None => {
+            tracing::warn!(
+                "MAILJET_API_KEY/MAILJET_SECRET_KEY/MAILJET_FROM_EMAIL absents - les \
+                 notifications de démarque seront seulement journalisées, aucun email ne partira"
+            );
+            Arc::new(LoggingEmailSender)
+        }
+    };
 
     let photo_storage = Arc::new(PhotoStorage::from_config(PhotoStorageConfig::from_env()).await);
 

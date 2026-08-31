@@ -86,7 +86,7 @@ Reprise de la stack Elevia (`projects/elevia`), qui a fait ses preuves en prod c
 - **Déploiement** : Docker Compose (profils dev/prod), Traefik + Let's Encrypt en prod, déploiement GitOps par cron (comme Elevia/KoproGo/OpenMajor). Pas encore mis en place pour DernièreChance (`backend/` tourne pour l'instant en local uniquement).
 
 Le backend (`backend/`) est implémenté : entités de domaine, ports (repositories + `EmailSender`), use cases et adaptateurs Postgres, testé de bout en bout (inscription, publication avec notification des abonnés, réservation avec décrément atomique du stock, validation du code de retrait, dashboards). Statut des briques identifiées :
-- **Notification email** : le port `EmailSender` existe et le flux de publication l'appelle pour chaque abonné, mais l'adaptateur branché (`LoggingEmailSender`) ne fait que logguer — aucun envoi réel. Reste à choisir un fournisseur (ex. Resend, ou SMTP) et écrire l'adaptateur derrière ce même port.
+- **Notification email** : fait — le flux de publication appelle `EmailSender` pour chaque abonné, et l'adaptateur `MailjetEmailSender` envoie réellement via l'API v3.1 de Mailjet (Mailjet SAS, infrastructure européenne, retenu contre Resend et SendGrid pour éviter un transfert hors UE au registre des traitements). Sans clés configurées, `main` retombe sur `LoggingEmailSender`, ce qui laisse le dev, la CI et les e2e tourner sans rien envoyer.
 - **Réservation** : fait — décrément de quantité atomique en SQL (`UPDATE ... WHERE statut='publie' AND quantite>0`), empêche la survente si deux consommateurs réservent en même temps.
 - **Géolocalisation** : toujours pas implémentée. Le frontend prototype affiche des distances statiques (mock) et le backend ne stocke aucune coordonnée ; le calcul réel (position du navigateur + distance au commerçant) reste à faire des deux côtés.
 
@@ -100,7 +100,7 @@ Pistes à explorer une fois le MVP validé par l'usage : paiement en ligne, noti
 - Nombre de produits publiés en démarque.
 - Nombre de réservations, et taux de retrait effectif (réservations honorées / réservations créées).
 - Nombre d'abonnements consommateur ↔ marchand.
-- Taux d'ouverture des emails de notification.
+- Part des notifications de démarque effectivement remises au fournisseur (table `notifications`, statut `envoyee` contre `echouee`). Le taux d'ouverture et le taux de clic ne sont pas mesurés : le suivi d'ouverture et la réécriture des liens de Mailjet sont désactivés, ce sont des traceurs que le registre des traitements exclut.
 - Nombre de produits marqués "écoulé" suite à une démarque (proxy du gaspillage évité).
 
 ## 11. Licence

@@ -20,6 +20,9 @@ Voir [`VISION.md`](./VISION.md) pour le produit en détail.
   commit** : il attend que toutes les images `sha-<court>` soient publiées
   avant de démarrer, et revient à la version précédente si le démarrage
   échoue.
+- **Emails** : alertes « nouvelle démarque » aux abonnés d'un marchand via
+  Mailjet (société française, serveurs UE) ; sans clés configurées, le backend
+  se rabat sur un adaptateur qui journalise seulement.
 - **RGPD** : consentement explicite tracé pour le programme bêta, retrait en
   un clic avec anonymisation du compte, rétention des journaux bornée à
   30 jours (voir [`docs/rgpd/`](./docs/rgpd/)).
@@ -50,6 +53,9 @@ le rapport (vidéos incluses) est publié sur GitHub Pages.
 
 ## Documentation complémentaire
 
+- [`docs/emails-mailjet.md`](./docs/emails-mailjet.md) — envoi des alertes
+  « nouvelle démarque » aux abonnés : mise en service Mailjet (clés,
+  expéditeur validé, SPF/DKIM) et décisions inscrites dans l'adaptateur.
 - [`docs/n8n-notifications-workflow.md`](./docs/n8n-notifications-workflow.md) —
   workflow n8n qui envoie un email pour chaque événement notable
   (inscription marchand, réservation, retrait).

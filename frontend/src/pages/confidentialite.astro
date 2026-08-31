@@ -232,11 +232,23 @@ const contactEmail = import.meta.env.PUBLIC_LEGAL_CONTACT_EMAIL ?? "gilmry@gmail
         chiffrées en transit (TLS via Traefik et Let's Encrypt).
       </p>
       <p>
-        Un seul sous-traitant intervient : <strong>l'outil d'automatisation
-        n8n</strong> auto-hébergé, qui déclenche l'envoi des emails de
-        notification (nouvelle réservation, retrait effectué). Il ne reçoit que
-        les informations strictement nécessaires à ces emails.
+        Deux sous-traitants interviennent, tous deux pour l'acheminement
+        d'emails, et chacun ne reçoit que les informations strictement
+        nécessaires à ces envois :
       </p>
+      <ul>
+        <li>
+          <strong>n8n</strong>, auto-hébergé, qui déclenche les emails
+          d'alerte internes (nouvelle réservation, retrait effectué).
+        </li>
+        <li>
+          <strong>Mailjet</strong> (Mailjet SAS, société française, serveurs
+          dans l'Union européenne), qui achemine les emails vous prévenant
+          d'une nouvelle démarque chez un commerçant que vous suivez. Nous y
+          désactivons le suivi d'ouverture et le pistage des liens : ces
+          emails ne contiennent ni pixel invisible ni lien de redirection.
+        </li>
+      </ul>
       <p>
         Les commerçants concernés voient les réservations qui leur sont
         destinées, ce qui est le principe même du service. Aucune donnée n'est

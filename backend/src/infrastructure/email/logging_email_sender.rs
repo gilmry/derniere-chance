@@ -3,11 +3,11 @@ use async_trait::async_trait;
 use crate::application::ports::{EmailError, EmailSender};
 use crate::domain::entities::{Merchant, Product};
 
-/// Placeholder `EmailSender` adapter: logs what would be sent instead of
-/// calling a real provider. No transactional-email service is wired up yet
-/// (see VISION.md §8) - replace this with a Resend/SMTP adapter behind the
-/// same `EmailSender` port when that's decided; nothing above this line in
-/// the call stack (use cases, handlers) needs to change.
+/// Adaptateur `EmailSender` de repli : journalise ce qui serait envoyé au
+/// lieu d'appeler un fournisseur. `main` le retient quand la configuration
+/// Mailjet est absente (poste de dev, CI, e2e), pour qu'aucun email ne parte
+/// vers de vraies personnes depuis un jeu de données de test. L'envoi réel
+/// passe par `super::MailjetEmailSender`.
 pub struct LoggingEmailSender;
 
 #[async_trait]

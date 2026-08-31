@@ -16,7 +16,7 @@ catégorie de données collectées).
   unique du responsable étant en Belgique. La CNIL est autorité concernée pour
   les testeurs résidant en France et peut être saisie par eux ; elle transmet
   alors à l'APD.
-- **Dernière mise à jour** : 30 août 2026
+- **Dernière mise à jour** : 31 août 2026
 - **Version du texte de consentement en vigueur** : `2026-08-30`
 
 ---
@@ -120,12 +120,21 @@ immédiatement.
 |---|---|---|
 | Commerçant partenaire | Destinataire | Les réservations le concernant (code de retrait, panier, statut) |
 | n8n auto-hébergé | Sous-traitant | Les seules informations nécessaires aux emails de notification (nouvelle réservation, retrait effectué, inscription). Pour l'événement `compte_anonymise`, uniquement l'identifiant technique et le rôle : jamais l'email ni le nom du commerce, sans quoi la donnée effacée survivrait chez le sous-traitant |
+| Mailjet SAS (France) | Sous-traitant | L'adresse email de l'abonné et le contenu de l'alerte « nouvelle démarque » (nom du commerce, du panier, prix, créneau de retrait). Aucun autre destinataire, aucune liste de contacts déposée chez le fournisseur : chaque email est envoyé à l'unité depuis notre base. Suivi d'ouverture et réécriture des liens désactivés à chaque appel |
 | Fournisseur du serveur (VPS) | Hébergeur d'infrastructure | Aucun accès applicatif ; données chiffrées en transit |
 
 Auto-hébergement : application, base PostgreSQL et photos (MinIO) tournent sur
 un serveur administré directement par le responsable. Pas de plateforme
 d'hébergement applicatif tierce, pas de CDN, pas de régie publicitaire, pas
 d'outil de mesure d'audience.
+
+L'acheminement des emails de notification est le seul traitement confié à un
+tiers. Mailjet SAS a été retenu sur ce seul critère : société française,
+serveurs dans l'Union européenne, ce qui évite l'encadrement d'un transfert
+vers les États-Unis qu'auraient imposé les fournisseurs américains du marché.
+Les adresses ne servent qu'à l'acheminement, ne sont pas conservées comme
+liste de contacts chez le sous-traitant, et le suivi d'ouverture comme la
+réécriture des liens sont désactivés à chaque envoi.
 
 **Aucun transfert hors de l'Union européenne.**
 

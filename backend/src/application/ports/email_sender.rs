@@ -9,11 +9,11 @@ pub enum EmailError {
     SendFailed(String),
 }
 
-/// Outbound email port. No concrete transactional-email provider is wired up
-/// yet (see VISION.md §8) - `infrastructure::email::LoggingEmailSender` is a
-/// stand-in adapter that only logs, so the notification flow (and its tests)
-/// don't depend on a real SMTP/API integration. Swap in a Resend/SMTP adapter
-/// behind this same trait when that's decided, with no change to the use cases.
+/// Outbound email port. Two adapters sit behind it:
+/// `infrastructure::email::MailjetEmailSender` (envoi réel, retenu quand la
+/// configuration Mailjet est présente) et `LoggingEmailSender`, qui se
+/// contente de logguer et sert de repli en dev, en CI et dans les tests - le
+/// flux de notification ne dépend donc d'aucun appel réseau.
 #[async_trait]
 pub trait EmailSender: Send + Sync {
     async fn send_new_offer_notification(
