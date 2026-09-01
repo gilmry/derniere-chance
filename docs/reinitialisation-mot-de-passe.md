@@ -73,6 +73,22 @@ backend. Aligner les deux est souhaitable, mais change le comportement de
 l'inscription et casserait les fixtures e2e (`password123`, 11 caractères) :
 c'est une décision à prendre à part.
 
+## Le lien ne doit pas retomber en clair
+
+Les pages statiques sont servies par nginx derrière Traefik, et nginx ne voit
+que du HTTP : ses redirections absolues renvoyaient vers `http://`. Le lien de
+réinitialisation portant le jeton dans la query string, ouvrir
+`https://.../mot-de-passe?token=...` produisait une redirection vers
+`http://.../mot-de-passe/?token=...`, donc une requête en clair transportant le
+jeton avant que Traefik ne relève la connexion. `absolute_redirect off` dans
+`frontend/nginx.conf` rend la redirection relative : le navigateur conserve le
+schéma en cours. Cela vaut pour toutes les pages à paramètres, pas seulement
+celle-ci.
+
+Il n'y a pas d'en-tête `Strict-Transport-Security` sur le domaine. L'ajouter au
+Traefik partagé serait la ceinture par-dessus les bretelles, mais cela touche
+aussi les autres services fronted par la même instance : à décider à part.
+
 ## Ce qui n'est pas fait
 
 - **Aucune limitation de débit globale.** Le délai de garde protège une adresse
