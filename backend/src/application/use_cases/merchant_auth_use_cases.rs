@@ -15,6 +15,7 @@ use crate::application::ports::{
 };
 use crate::application::use_cases::BETA_CONSENT_VERSION;
 use crate::domain::entities::{ConsentSubject, Merchant};
+use crate::domain::services::password;
 
 #[derive(Debug, Error)]
 pub enum MerchantAuthError {
@@ -24,6 +25,8 @@ pub enum MerchantAuthError {
     InvalidCredentials,
     #[error("consent version is no longer current")]
     StaleConsentVersion,
+    #[error("invalid input: {0}")]
+    InvalidInput(String),
     #[error("invalid or expired token")]
     InvalidToken,
     #[error("password hashing failed")]
@@ -68,6 +71,11 @@ impl MerchantAuthUseCases {
         if dto.consent_version != BETA_CONSENT_VERSION {
             return Err(MerchantAuthError::StaleConsentVersion);
         }
+
+        // Même règle qu'à la réinitialisation : le compte ne doit pas pouvoir
+        // naître avec un mot de passe que le parcours « mot de passe oublié »
+        // refuserait ensuite.
+        password::validate(&dto.password).map_err(MerchantAuthError::InvalidInput)?;
 
         if self
             .merchant_repo

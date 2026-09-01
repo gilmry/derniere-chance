@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { consumerLogin, consumerRegister, ApiError } from "../lib/api";
+  import { consumerLogin, consumerRegister, MIN_PASSWORD_LENGTH, ApiError } from "../lib/api";
   import { setConsumerToken, setConsumerEmail } from "../lib/auth";
   import { getQueryParam } from "../lib/params";
 
@@ -50,7 +50,20 @@
     <h1>{mode === "register" ? "Créer un compte" : "Se connecter"}</h1>
     <form class="fields" on:submit={submit}>
       <input placeholder="Email" type="email" bind:value={email} required />
-      <input placeholder="Mot de passe" type="password" bind:value={password} required minlength="8" />
+      <!-- La longueur minimale ne vaut qu'à l'inscription : l'imposer aussi à
+           la connexion empêcherait les comptes créés avant cette règle de se
+           connecter avec leur mot de passe actuel, qui reste valable. -->
+      <input
+        placeholder="Mot de passe"
+        type="password"
+        bind:value={password}
+        required
+        minlength={mode === "register" ? MIN_PASSWORD_LENGTH : undefined}
+        autocomplete={mode === "register" ? "new-password" : "current-password"}
+      />
+      {#if mode === "register"}
+        <p class="hint">Au moins {MIN_PASSWORD_LENGTH} caractères. Une phrase dont vous vous souvenez vaut mieux qu'un mot court et compliqué.</p>
+      {/if}
       {#if mode === "register"}
         <label class="consent">
           <input type="checkbox" bind:checked={consent} required />
@@ -131,6 +144,13 @@
   .consent a {
     color: var(--color-primary);
     font-weight: 600;
+  }
+
+  .hint {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-muted);
+    margin: -4px 2px 0;
   }
 
   .error {

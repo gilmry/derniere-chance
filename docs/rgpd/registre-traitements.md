@@ -135,11 +135,9 @@ tiers. Les adresses ne servent qu'à cet acheminement, ne sont pas conservées
 comme liste de contacts chez le sous-traitant, et aucun traceur n'est posé
 dans les messages : ni pixel d'ouverture, ni réécriture des liens.
 
-Une seconde voie d'acheminement existe dans le code, vers Mailjet SAS
-(société française, serveurs dans l'Union). Elle est inactive : aucune donnée
-ne lui est transmise tant que le relais SMTP est configuré. La mettre en
-service est un changement de sous-traitant, donc une mise à jour de ce
-registre.
+Un seul sous-traitant achemine les emails. Aucune voie de rechange n'est
+câblée : en ajouter une serait un changement de sous-traitant, donc une mise à
+jour de ce registre.
 
 **Transferts hors de l'Union européenne : la Suisse, et elle seule.** Proton AG
 est établie en Suisse. Ce transfert est licite sans garanties supplémentaires

@@ -17,11 +17,10 @@ séparés.
 | Adaptateur | Transport | Retenu quand |
 |---|---|---|
 | `SmtpEmailSender` | relais SMTP quelconque, via `lettre` | `SMTP_SERVEUR`, `SMTP_USER` et `SMTP_TOKEN` sont renseignés |
-| `MailjetEmailSender` | API HTTP v3.1 de Mailjet | à défaut, si les clés Mailjet sont renseignées |
-| `LoggingEmailSender` | aucun, journalise | à défaut de tout le reste |
+| `LoggingEmailSender` | aucun, journalise | à défaut |
 
-`infrastructure::email::sender_from_env` applique cet ordre et renvoie le nom
-du transporteur, que le démarrage journalise. Sans cette ligne, une variable
+`infrastructure::email::sender_from_env` tranche et renvoie le nom du
+transporteur, que le démarrage journalise. Sans cette ligne, une variable
 oubliée se traduirait par un silence indiscernable d'un envoi réussi.
 
 Le repli sur la journalisation n'est pas une commodité : il garantit qu'un
@@ -30,9 +29,11 @@ vraies personnes depuis un jeu de données de test. C'est aussi pourquoi
 `docker-compose.yml` ne passe les variables d'envoi qu'au service `backend` du
 profil prod, jamais à `backend-dev`.
 
-Le corps des messages est rendu par `infrastructure::email::message`, commun
-aux deux transporteurs : changer de fournisseur ne change rien à ce que le
-destinataire lit, et un seul jeu de tests couvre les deux chemins.
+Le corps des messages est rendu par `infrastructure::email::message`, séparé
+du transport : changer de fournisseur ne change rien à ce que le destinataire
+lit, et le gabarit reste testable sans réseau. Un adaptateur HTTP sur l'API
+d'un fournisseur se brancherait au même endroit, mais SMTP suffit et n'enferme
+dans aucune plateforme.
 
 ## Le transport en service : Proton
 
@@ -43,10 +44,6 @@ C'est la seule sortie de données hors de l'Union dans tout le produit, et elle
 est déclarée comme telle dans
 [`rgpd/registre-traitements.md`](./rgpd/registre-traitements.md) et dans la
 politique de confidentialité publique.
-
-Mailjet reste câblé comme voie de secours, mais inactive : tant que le relais
-SMTP est configuré, aucune donnée ne lui est transmise. La bascule est un
-changement de sous-traitant, donc une mise à jour du registre.
 
 ## Mise en service d'un relais SMTP
 
@@ -94,14 +91,11 @@ ailleurs. Le clair n'est jamais utilisé.
 
 ## Décisions inscrites dans le code
 
-- **Pas de traceur.** Aucun pixel d'ouverture, aucune réécriture de liens. Sur
-  Mailjet, `TrackOpens` et `TrackClicks` sont forcés à `disabled` à chaque
-  envoi. C'est ce qui permet à la politique de confidentialité d'annoncer des
-  emails sans pistage, au prix du taux d'ouverture comme métrique (voir
+- **Pas de traceur.** Aucun pixel d'ouverture, aucune réécriture de liens : un
+  envoi SMTP ne pose rien de tel, contrairement aux plateformes qui l'activent
+  par défaut. C'est ce qui permet à la politique de confidentialité d'annoncer
+  des emails sans pistage, au prix du taux d'ouverture comme métrique (voir
   `VISION.md` §10).
-- **Un 200 ne suffit pas.** Mailjet peut répondre 200 tout en refusant le
-  message ; le verdict par destinataire est dans `Messages[].Status`. Sans
-  cette vérification, un refus serait journalisé comme `Envoyee`.
 - **Envoi borné à 10 s.** Le fan-out aux abonnés est séquentiel : un
   fournisseur lent retarderait la publication d'une démarque.
 - **Heure de Bruxelles dans le corps.** Le créneau de retrait est stocké en

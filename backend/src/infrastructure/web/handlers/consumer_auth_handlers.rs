@@ -3,18 +3,25 @@ use actix_web::{web, HttpResponse};
 use crate::application::dto::{LoginRequest, RegisterConsumerRequest};
 use crate::application::use_cases::ConsumerAuthError;
 use crate::infrastructure::web::app_state::AppState;
-use crate::infrastructure::web::handlers::responses::{conflict, internal_error, unauthorized};
+use crate::infrastructure::web::handlers::responses::{
+    bad_request, conflict, internal_error, unauthorized,
+};
 
 pub async fn register(
     state: web::Data<AppState>,
     dto: web::Json<RegisterConsumerRequest>,
 ) -> HttpResponse {
-    match state.consumer_auth_use_cases.register(dto.into_inner()).await {
+    match state
+        .consumer_auth_use_cases
+        .register(dto.into_inner())
+        .await
+    {
         Ok(response) => HttpResponse::Created().json(response),
         Err(ConsumerAuthError::EmailTaken) => conflict("an account already exists for this email"),
         Err(ConsumerAuthError::StaleConsentVersion) => conflict(
             "la politique de confidentialité a changé, recharge la page avant de t'inscrire",
         ),
+        Err(ConsumerAuthError::InvalidInput(message)) => bad_request(&message),
         Err(err) => {
             tracing::error!(?err, "consumer register failed");
             internal_error()

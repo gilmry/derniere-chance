@@ -10,6 +10,7 @@ use crate::application::ports::{
 };
 use crate::application::use_cases::BETA_CONSENT_VERSION;
 use crate::domain::entities::{ConsentSubject, Consumer};
+use crate::domain::services::password;
 
 #[derive(Debug, Error)]
 pub enum ConsumerAuthError {
@@ -19,6 +20,8 @@ pub enum ConsumerAuthError {
     InvalidCredentials,
     #[error("consent version is no longer current")]
     StaleConsentVersion,
+    #[error("invalid input: {0}")]
+    InvalidInput(String),
     #[error("invalid or expired token")]
     InvalidToken,
     #[error("password hashing failed")]
@@ -62,6 +65,11 @@ impl ConsumerAuthUseCases {
         if dto.consent_version != BETA_CONSENT_VERSION {
             return Err(ConsumerAuthError::StaleConsentVersion);
         }
+
+        // Même règle qu'à la réinitialisation : le compte ne doit pas pouvoir
+        // naître avec un mot de passe que le parcours « mot de passe oublié »
+        // refuserait ensuite.
+        password::validate(&dto.password).map_err(ConsumerAuthError::InvalidInput)?;
 
         if self
             .consumer_repo

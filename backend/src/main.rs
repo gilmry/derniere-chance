@@ -66,7 +66,7 @@ async fn main() -> std::io::Result<()> {
     let app_base_url = std::env::var("APP_BASE_URL")
         .unwrap_or_else(|_| "https://derniere-chance.ecosolva.org".to_string());
 
-    // SMTP, Mailjet ou simple journalisation selon ce qui est configuré (voir
+    // Relais SMTP ou simple journalisation, selon ce qui est configuré (voir
     // `infrastructure::email::sender_from_env`). Le nom est journalisé au
     // démarrage : sans lui, une variable oubliée se traduirait par un silence
     // indiscernable d'un envoi réussi.

@@ -4,7 +4,7 @@ use crate::application::dto::{LoginRequest, RegisterMerchantRequest, UpdateMerch
 use crate::application::use_cases::MerchantAuthError;
 use crate::infrastructure::web::app_state::AppState;
 use crate::infrastructure::web::handlers::responses::{
-    conflict, internal_error, not_found, unauthorized,
+    bad_request, conflict, internal_error, not_found, unauthorized,
 };
 use crate::infrastructure::web::middleware::ConsentedMerchant;
 
@@ -12,12 +12,17 @@ pub async fn register(
     state: web::Data<AppState>,
     dto: web::Json<RegisterMerchantRequest>,
 ) -> HttpResponse {
-    match state.merchant_auth_use_cases.register(dto.into_inner()).await {
+    match state
+        .merchant_auth_use_cases
+        .register(dto.into_inner())
+        .await
+    {
         Ok(response) => HttpResponse::Created().json(response),
         Err(MerchantAuthError::EmailTaken) => conflict("an account already exists for this email"),
         Err(MerchantAuthError::StaleConsentVersion) => conflict(
             "la politique de confidentialité a changé, recharge la page avant de t'inscrire",
         ),
+        Err(MerchantAuthError::InvalidInput(message)) => bad_request(&message),
         Err(err) => {
             tracing::error!(?err, "merchant register failed");
             internal_error()

@@ -15,7 +15,10 @@ import { test, expect } from "@playwright/test";
 const STAMP = Date.now();
 const CONSUMER_EMAIL = `e2e-consent-conso-${STAMP}@test.com`;
 const MERCHANT_EMAIL = `e2e-consent-marchand-${STAMP}@test.com`;
-const PASSWORD = "password123";
+// Au moins MIN_PASSWORD_LENGTH caractères (backend/src/domain/services/password.rs) :
+// l'inscription refuse plus court depuis que la règle est alignée sur celle de
+// la réinitialisation.
+const PASSWORD = "mot-de-passe-e2e-2026";
 const BASKET_NAME = `Panier consentement ${STAMP}`;
 
 test.describe("consentement bêta", () => {

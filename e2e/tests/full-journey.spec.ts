@@ -14,7 +14,10 @@ import { test, expect } from "@playwright/test";
 const STAMP = Date.now();
 const MERCHANT_EMAIL = `e2e-marchand-${STAMP}@test.com`;
 const CONSUMER_EMAIL = `e2e-conso-${STAMP}@test.com`;
-const PASSWORD = "password123";
+// Au moins MIN_PASSWORD_LENGTH caractères (backend/src/domain/services/password.rs) :
+// l'inscription refuse plus court depuis que la règle est alignée sur celle de
+// la réinitialisation.
+const PASSWORD = "mot-de-passe-e2e-2026";
 const BASKET_NAME = `Panier e2e ${STAMP}`;
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? "admin@example.com";
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? "change-me-immediately";

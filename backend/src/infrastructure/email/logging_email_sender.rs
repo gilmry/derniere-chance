@@ -5,9 +5,9 @@ use crate::domain::entities::{Merchant, Product};
 
 /// Adaptateur `EmailSender` de repli : journalise ce qui serait envoyé au
 /// lieu d'appeler un fournisseur. `main` le retient quand la configuration
-/// Mailjet est absente (poste de dev, CI, e2e), pour qu'aucun email ne parte
+/// SMTP est absente (poste de dev, CI, e2e), pour qu'aucun email ne parte
 /// vers de vraies personnes depuis un jeu de données de test. L'envoi réel
-/// passe par `super::MailjetEmailSender`.
+/// passe par `super::SmtpEmailSender`.
 pub struct LoggingEmailSender;
 
 #[async_trait]

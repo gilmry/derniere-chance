@@ -67,11 +67,13 @@ longueur plutôt que la complexité imposée, comme le recommandent l'ANSSI et l
 NIST, d'autant qu'il n'y a ici ni second facteur ni limitation de débit sur la
 connexion.
 
-**Cette règle ne s'applique pour l'instant qu'à la réinitialisation.**
-L'inscription se contente d'un `minlength="8"` côté navigateur, sans contrôle
-backend. Aligner les deux est souhaitable, mais change le comportement de
-l'inscription et casserait les fixtures e2e (`password123`, 11 caractères) :
-c'est une décision à prendre à part.
+La même règle vaut à l'inscription, client comme marchand : un compte ne doit
+pas pouvoir naître avec un mot de passe que ce parcours refuserait ensuite.
+
+**Elle ne s'applique pas à la connexion**, volontairement. Les comptes créés
+avant cette règle gardent un mot de passe plus court, qui reste valable : le
+leur refuser les enfermerait dehors. C'est pourquoi le `minlength` du
+formulaire n'est posé qu'en mode inscription.
 
 ## Le lien ne doit pas retomber en clair
 

@@ -13,12 +13,11 @@ use crate::domain::entities::{Merchant, Product};
 const SEND_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
 
 /// Adaptateur `EmailSender` sur un relais SMTP quelconque (Proton, OVH,
-/// Scaleway, Mailjet en mode SMTP...).
+/// Scaleway...).
 ///
-/// Il existe à côté de l'adaptateur Mailjet pour que la plateforme ne dépende
-/// pas d'un fournisseur unique : le corps de l'email est rendu par
-/// `super::message`, donc changer de transporteur ne change rien à ce que le
-/// destinataire lit.
+/// Le corps de l'email est rendu par `super::message`, donc changer de
+/// fournisseur ne change rien à ce que le destinataire lit : seuls quatre
+/// réglages bougent.
 pub struct SmtpEmailSender {
     from: Mailbox,
     app_base_url: String,
