@@ -16,7 +16,7 @@ catégorie de données collectées).
   unique du responsable étant en Belgique. La CNIL est autorité concernée pour
   les testeurs résidant en France et peut être saisie par eux ; elle transmet
   alors à l'APD.
-- **Dernière mise à jour** : 31 août 2026
+- **Dernière mise à jour** : 1er septembre 2026
 - **Version du texte de consentement en vigueur** : `2026-08-30`
 
 ---
@@ -120,7 +120,7 @@ immédiatement.
 |---|---|---|
 | Commerçant partenaire | Destinataire | Les réservations le concernant (code de retrait, panier, statut) |
 | n8n auto-hébergé | Sous-traitant | Les seules informations nécessaires aux emails de notification (nouvelle réservation, retrait effectué, inscription). Pour l'événement `compte_anonymise`, uniquement l'identifiant technique et le rôle : jamais l'email ni le nom du commerce, sans quoi la donnée effacée survivrait chez le sous-traitant |
-| Mailjet SAS (France) | Sous-traitant | L'adresse email de l'abonné et le contenu de l'alerte « nouvelle démarque » (nom du commerce, du panier, prix, créneau de retrait). Aucun autre destinataire, aucune liste de contacts déposée chez le fournisseur : chaque email est envoyé à l'unité depuis notre base. Suivi d'ouverture et réécriture des liens désactivés à chaque appel |
+| Proton AG (Suisse) | Sous-traitant | L'adresse email de l'abonné et le contenu de l'alerte « nouvelle démarque » (nom du commerce, du panier, prix, créneau de retrait), acheminés par son relais SMTP. Aucune liste de contacts n'est déposée chez le fournisseur : chaque message est envoyé à l'unité depuis notre base |
 | Fournisseur du serveur (VPS) | Hébergeur d'infrastructure | Aucun accès applicatif ; données chiffrées en transit |
 
 Auto-hébergement : application, base PostgreSQL et photos (MinIO) tournent sur
@@ -129,14 +129,22 @@ d'hébergement applicatif tierce, pas de CDN, pas de régie publicitaire, pas
 d'outil de mesure d'audience.
 
 L'acheminement des emails de notification est le seul traitement confié à un
-tiers. Mailjet SAS a été retenu sur ce seul critère : société française,
-serveurs dans l'Union européenne, ce qui évite l'encadrement d'un transfert
-vers les États-Unis qu'auraient imposé les fournisseurs américains du marché.
-Les adresses ne servent qu'à l'acheminement, ne sont pas conservées comme
-liste de contacts chez le sous-traitant, et le suivi d'ouverture comme la
-réécriture des liens sont désactivés à chaque envoi.
+tiers. Les adresses ne servent qu'à cet acheminement, ne sont pas conservées
+comme liste de contacts chez le sous-traitant, et aucun traceur n'est posé
+dans les messages : ni pixel d'ouverture, ni réécriture des liens.
 
-**Aucun transfert hors de l'Union européenne.**
+Une seconde voie d'acheminement existe dans le code, vers Mailjet SAS
+(société française, serveurs dans l'Union). Elle est inactive : aucune donnée
+ne lui est transmise tant que le relais SMTP est configuré. La mettre en
+service est un changement de sous-traitant, donc une mise à jour de ce
+registre.
+
+**Transferts hors de l'Union européenne : la Suisse, et elle seule.** Proton AG
+est établie en Suisse. Ce transfert est licite sans garanties supplémentaires
+au titre de l'article 45 du RGPD, la Commission européenne ayant constaté que
+la Suisse assure un niveau de protection adéquat. Aucun transfert vers un pays
+tiers dépourvu de décision d'adéquation, en particulier aucun vers les
+États-Unis.
 
 ### Mesures de sécurité
 

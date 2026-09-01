@@ -3,7 +3,7 @@ use std::sync::Arc;
 use actix_cors::Cors;
 use actix_web::{web, App, HttpServer};
 
-use derniere_chance_api::application::ports::{EmailSender, EventNotifier};
+use derniere_chance_api::application::ports::EventNotifier;
 use derniere_chance_api::application::use_cases::{
     AdminAuthUseCases, AdminUseCases, CatalogUseCases, ConsentUseCases, ConsumerAuthUseCases,
     DashboardUseCases, MerchantAuthUseCases, OAuthUseCases, ProductUseCases, ReservationUseCases,
@@ -17,7 +17,7 @@ use derniere_chance_api::infrastructure::database::repositories::{
     PostgresOAuthClientRepository, PostgresProductRepository, PostgresRefreshTokenRepository,
     PostgresReservationRepository, PostgresSubscriptionRepository,
 };
-use derniere_chance_api::infrastructure::email::{LoggingEmailSender, MailjetEmailSender};
+use derniere_chance_api::infrastructure::email::sender_from_env;
 use derniere_chance_api::infrastructure::notifications::WebhookNotifier;
 use derniere_chance_api::infrastructure::storage::{PhotoStorage, PhotoStorageConfig};
 use derniere_chance_api::infrastructure::web::{configure_routes, AppState};
@@ -60,20 +60,19 @@ async fn main() -> std::io::Result<()> {
     let oauth_code_repo = Arc::new(PostgresAuthorizationCodeRepository::new(db.clone()));
     let oauth_refresh_repo = Arc::new(PostgresRefreshTokenRepository::new(db.clone()));
 
-    // Envoi réel par Mailjet dès que les clés et l'expéditeur sont renseignés.
-    // Sans eux, on retombe sur l'adaptateur qui ne fait que logguer : un poste
-    // de dev, la CI et les e2e tournent ainsi sans clé, et sans risquer
-    // d'écrire à de vraies personnes depuis un jeu de données de test.
-    let email_sender: Arc<dyn EmailSender> = match MailjetEmailSender::from_env() {
-        Some(mailjet) => Arc::new(mailjet),
-        None => {
-            tracing::warn!(
-                "MAILJET_API_KEY/MAILJET_SECRET_KEY/MAILJET_FROM_EMAIL absents - les \
-                 notifications de démarque seront seulement journalisées, aucun email ne partira"
-            );
-            Arc::new(LoggingEmailSender)
-        }
-    };
+    // SMTP, Mailjet ou simple journalisation selon ce qui est configuré (voir
+    // `infrastructure::email::sender_from_env`). Le nom est journalisé au
+    // démarrage : sans lui, une variable oubliée se traduirait par un silence
+    // indiscernable d'un envoi réussi.
+    let (email_sender, email_provider) = sender_from_env();
+    if email_provider == "journalisation seule" {
+        tracing::warn!(
+            "aucun transporteur d'email configuré - les notifications de démarque seront \
+             seulement journalisées, aucun email ne partira"
+        );
+    } else {
+        tracing::info!(%email_provider, "transporteur d'email en service");
+    }
 
     let photo_storage = Arc::new(PhotoStorage::from_config(PhotoStorageConfig::from_env()).await);
 

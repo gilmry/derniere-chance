@@ -45,6 +45,10 @@ thiserror = "2.0"
 # Outbound event notifications (webhook -> n8n -> email, see infrastructure::notifications)
 reqwest = { version = "0.12", features = ["json"] }
 
+# Emails aux abonnés : relais SMTP (voir infrastructure::email::SmtpEmailSender).
+# native-tls comme sqlx et reqwest, pour n'embarquer qu'une pile TLS.
+lettre = { version = "0.11", default-features = false, features = ["builder", "smtp-transport", "tokio1", "tokio1-native-tls"] }
+
 # Photo storage (S3/MinIO)
 actix-multipart = "0.8"
 aws-config = { version = "1", features = ["behavior-version-latest"] }

@@ -1,44 +1,51 @@
-//! Envoi réel d'une alerte « nouvelle démarque » via Mailjet.
+//! Envoi réel d'une alerte « nouvelle démarque », par le transporteur
+//! effectivement configuré.
 //!
 //! Ignoré par défaut : ce test sort sur le réseau et écrit dans une vraie
 //! boîte mail. Il ne doit jamais partir en CI, mais il reste ici parce que
 //! c'est le seul moyen de vérifier ce que les tests unitaires ne peuvent pas
-//! voir : clés valides, adresse d'expédition validée chez Mailjet, SPF/DKIM
-//! posés. À rejouer après toute rotation de clés ou changement d'expéditeur.
+//! voir : identifiants valides, expéditeur autorisé par le relais, SPF/DKIM
+//! posés. À rejouer après toute rotation de jeton ou changement de
+//! fournisseur.
 //!
 //! ```sh
 //! cd backend
-//! MAILJET_TEST_TO=vous@example.org cargo test --test mailjet_smoke -- --ignored --nocapture
+//! EMAIL_TEST_TO=vous@example.org cargo test --test email_smoke -- --ignored --nocapture
 //! ```
 //!
-//! Les identifiants sont lus dans le `.env` du dépôt (MAILJET_API_KEY,
-//! MAILJET_SECRET_KEY, MAILJET_FROM_EMAIL).
+//! Il passe par `sender_from_env`, donc il éprouve exactement l'adaptateur qui
+//! tournera en production, et son nom est affiché avant l'envoi.
 
 use chrono::{Duration, Utc};
 use rust_decimal_macros::dec;
 use uuid::Uuid;
 
-use derniere_chance_api::application::ports::EmailSender;
 use derniere_chance_api::domain::entities::{Merchant, Product, ProductStatus};
-use derniere_chance_api::infrastructure::email::MailjetEmailSender;
+use derniere_chance_api::infrastructure::email::sender_from_env;
 
 #[tokio::test]
-#[ignore = "envoie un vrai email : lancer avec --ignored et MAILJET_TEST_TO"]
+#[ignore = "envoie un vrai email : lancer avec --ignored et EMAIL_TEST_TO"]
 async fn envoie_une_vraie_alerte_nouvelle_demarque() {
     // Chemin explicite : `dotenvy::dotenv()` remonte depuis le répertoire
     // courant, mais s'arrête à la première ligne qu'il ne sait pas lire et
     // rend la main en silence si on avale l'erreur.
     let env_file = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../.env");
     if let Err(err) = dotenvy::from_path(&env_file) {
-        eprintln!("{} non chargé ({err}) : on se rabat sur l'environnement", env_file.display());
+        eprintln!(
+            "{} non chargé ({err}) : on se rabat sur l'environnement",
+            env_file.display()
+        );
     }
 
-    let destinataire = std::env::var("MAILJET_TEST_TO")
-        .expect("MAILJET_TEST_TO doit contenir une adresse qui vous appartient");
+    let destinataire = std::env::var("EMAIL_TEST_TO")
+        .expect("EMAIL_TEST_TO doit contenir une adresse qui vous appartient");
 
-    let sender = MailjetEmailSender::from_env().expect(
-        "MAILJET_API_KEY, MAILJET_SECRET_KEY et MAILJET_FROM_EMAIL doivent être renseignés",
+    let (sender, provider) = sender_from_env();
+    assert_ne!(
+        provider, "journalisation seule",
+        "aucun transporteur configuré : ce test n'enverrait rien et passerait pour un succès"
     );
+    println!("transporteur : {provider}");
 
     let now = Utc::now();
     let merchant = Merchant {
@@ -73,7 +80,7 @@ async fn envoie_une_vraie_alerte_nouvelle_demarque() {
     sender
         .send_new_offer_notification(&destinataire, &merchant, &product)
         .await
-        .expect("Mailjet a refusé l'envoi");
+        .expect("le transporteur a refusé l'envoi");
 
     println!("email envoyé à {destinataire}");
 }

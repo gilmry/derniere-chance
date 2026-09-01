@@ -96,7 +96,7 @@ ci-dessus. Elle n'est pas acquise pour la suite.
 | Recommandation personnalisée, score de fiabilité client ou marchand | 1, et 2 si une décision en découle |
 | Encaissement en ligne, collecte de données de paiement | 4 |
 | Ouverture aux mineurs | 7 |
-| Recours à un sous-traitant hors UE | Transferts (chap. V), à traiter séparément |
+| Recours à un sous-traitant hors UE sans décision d'adéquation | Transferts (chap. V), à traiter séparément. Survenu en partie le 1er septembre 2026 avec Proton AG pour l'acheminement des emails : la Suisse bénéficiant d'une décision d'adéquation (art. 45), aucune garantie supplémentaire n'est requise et le critère n'est pas atteint. Un fournisseur hors adéquation le déclencherait |
 
 Les deux premières lignes sont des évolutions naturelles de ce produit : elles
 méritent d'être signalées ici plutôt que découvertes en cours de

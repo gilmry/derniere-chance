@@ -152,9 +152,17 @@ services:
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       WEBHOOK_NOTIFY_URL: ${WEBHOOK_NOTIFY_URL:-}
-      # Emails de notification aux abonnés d'un marchand (Mailjet). Sans ces
-      # trois variables, le backend retombe sur l'adaptateur qui journalise
-      # seulement : rien ne part, et le démarrage le dit dans les journaux.
+      # Emails de notification aux abonnés d'un marchand. Le relais SMTP passe
+      # avant Mailjet quand les deux sont configurés ; si rien ne l'est, le
+      # backend retombe sur l'adaptateur qui journalise seulement, et le
+      # démarrage dit lequel est en service.
+      SMTP_SERVEUR: ${SMTP_SERVEUR:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_PROTOCOL: ${SMTP_PROTOCOL:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_TOKEN: ${SMTP_TOKEN:-}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-}
       MAILJET_API_KEY: ${MAILJET_API_KEY:-}
       MAILJET_SECRET_KEY: ${MAILJET_SECRET_KEY:-}
       MAILJET_FROM_EMAIL: ${MAILJET_FROM_EMAIL:-}
@@ -200,12 +208,12 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       WEBHOOK_NOTIFY_URL: ${WEBHOOK_NOTIFY_URL:-}
       APP_BASE_URL: http://localhost:${FRONTEND_PORT:-4322}
-      # Pas de MAILJET_* ici, volontairement : le jeu de données de dev
+      # Ni SMTP_* ni MAILJET_* ici, volontairement : le jeu de données de dev
       # contient des adresses fictives, et les leur envoyer pour de vrai ferait
       # rebondir des messages au nom du domaine de production. Le backend
-      # retombe sur l'adaptateur qui journalise. Pour tester l'envoi réel,
-      # ajouter les trois variables ici le temps du test, avec une adresse
-      # d'abonné qui vous appartient.
+      # retombe sur l'adaptateur qui journalise. Pour éprouver un envoi réel,
+      # passer par le test de fumée `backend/tests/email_smoke.rs`, qui vise
+      # une adresse qui vous appartient.
     ports:
       - "8080:8080"
     volumes:
