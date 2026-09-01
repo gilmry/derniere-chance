@@ -24,5 +24,9 @@ pub trait ConsumerRepository: Send + Sync {
     /// supprimer la ligne - la preuve de consentement et les réservations
     /// déjà honorées par les commerçants y sont rattachées. Idempotent.
     async fn anonymize(&self, id: Uuid) -> Result<(), RepoError>;
+    /// Remplace l'empreinte du mot de passe. Ne touche pas à un compte
+    /// anonymisé : son empreinte vide doit le rester, sans quoi un retrait de
+    /// consentement se rouvrirait par une réinitialisation.
+    async fn update_password(&self, id: Uuid, password_hash: &str) -> Result<(), RepoError>;
     async fn count(&self) -> Result<i64, RepoError>;
 }

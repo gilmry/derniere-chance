@@ -49,3 +49,17 @@ pub struct Claims {
     pub role: String,
     pub exp: usize,
 }
+
+/// Demande d'un lien de réinitialisation. Rien d'autre que l'adresse : la
+/// réponse est identique que le compte existe ou non.
+#[derive(Debug, Deserialize)]
+pub struct ForgotPasswordRequest {
+    pub email: String,
+}
+
+/// Pose du nouveau mot de passe, avec le jeton reçu par email.
+#[derive(Debug, Deserialize)]
+pub struct ResetPasswordRequest {
+    pub token: String,
+    pub password: String,
+}

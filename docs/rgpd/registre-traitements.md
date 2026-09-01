@@ -77,6 +77,7 @@ du consentement, ne servent qu'à cette fin, et leur conservation est bornée à
 | Usage | Commerçants suivis | `abonnements` |
 | Usage | Réservations : panier, code de retrait, statut, date | `reservations` |
 | Usage | Notifications envoyées et leur statut | `notifications` |
+| Sécurité du compte | Empreinte SHA-256 d'un jeton de réinitialisation de mot de passe, compte visé, dates d'émission, d'expiration et d'usage. Le jeton lui-même n'est jamais stocké | `reinitialisations_mot_de_passe` |
 | Usage (commerçant) | Paniers publiés, prix, fenêtres de retrait, photos | `produits` |
 | Techniques | Adresses IP, dates, chemins et codes de réponse HTTP | Journaux applicatifs (conteneurs Docker) |
 | Sécurité | Adresses IP, signatures d'attaque, bannissements | Suricata, CrowdSec, Fail2ban, journal système |
@@ -104,6 +105,7 @@ grande échelle » qui déclencherait une AIPD.
 |---|---|---|
 | Compte et données d'usage (client et commerçant) | Durée du programme bêta, puis suppression ou anonymisation sous 1 mois | Manuel à la clôture du bêta |
 | Paniers publiés | Dépubliés immédiatement au retrait du consentement du commerçant | `ProductRepository::unpublish_all_by_merchant` |
+| Jeton de réinitialisation de mot de passe | 1 heure, puis effacé | Expiration en base, suppression des lignes périmées à la demande suivante |
 | Preuve du consentement | 3 ans après retrait ou clôture du programme | Table `consentements_beta`, sans donnée identifiante après anonymisation du compte |
 | Réservations | 12 mois (statistiques commerçants), détachées de l'identité dès l'anonymisation | Anonymisation du compte |
 | Journaux applicatifs | Bornés à 50 Mo par service (~quelques semaines au rythme du bêta) | `logging.max-size`/`max-file` dans `docker-compose.yml` |
@@ -120,7 +122,7 @@ immédiatement.
 |---|---|---|
 | Commerçant partenaire | Destinataire | Les réservations le concernant (code de retrait, panier, statut) |
 | n8n auto-hébergé | Sous-traitant | Les seules informations nécessaires aux emails de notification (nouvelle réservation, retrait effectué, inscription). Pour l'événement `compte_anonymise`, uniquement l'identifiant technique et le rôle : jamais l'email ni le nom du commerce, sans quoi la donnée effacée survivrait chez le sous-traitant |
-| Proton AG (Suisse) | Sous-traitant | L'adresse email de l'abonné et le contenu de l'alerte « nouvelle démarque » (nom du commerce, du panier, prix, créneau de retrait), acheminés par son relais SMTP. Aucune liste de contacts n'est déposée chez le fournisseur : chaque message est envoyé à l'unité depuis notre base |
+| Proton AG (Suisse) | Sous-traitant | L'adresse email du destinataire et le contenu du message, acheminés par son relais SMTP : alerte « nouvelle démarque » (nom du commerce, du panier, prix, créneau de retrait) ou lien de réinitialisation de mot de passe. Ce dernier ne nomme ni le compte ni la personne, pour ne rien révéler s'il atteint la boîte de quelqu'un qui n'a rien demandé. Aucune liste de contacts n'est déposée chez le fournisseur : chaque message est envoyé à l'unité depuis notre base |
 | Fournisseur du serveur (VPS) | Hébergeur d'infrastructure | Aucun accès applicatif ; données chiffrées en transit |
 
 Auto-hébergement : application, base PostgreSQL et photos (MinIO) tournent sur

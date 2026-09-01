@@ -96,6 +96,56 @@ pub(super) fn new_offer_email(
     }
 }
 
+/// Lien de réinitialisation de mot de passe.
+///
+/// Le message ne nomme ni le compte ni la personne : il peut atterrir dans la
+/// boîte de quelqu'un qui n'a rien demandé, parce que n'importe qui peut
+/// saisir une adresse dans le formulaire. Il dit donc quoi faire, et surtout
+/// quoi faire si on n'a rien demandé.
+pub(super) fn password_reset_email(reset_url: &str, expires_in_minutes: i64) -> RenderedEmail {
+    let subject = "Réinitialiser votre mot de passe DernièreChance".to_string();
+
+    let text = format!(
+        "Bonjour,\n\n\
+         Une réinitialisation de mot de passe a été demandée pour ce compte \
+         DernièreChance. Pour choisir un nouveau mot de passe, ouvrez ce lien \
+         dans les {minutes} minutes :\n\n\
+         {lien}\n\n\
+         Passé ce délai, le lien ne fonctionnera plus et il faudra en demander \
+         un autre. Il ne fonctionne qu'une seule fois.\n\n\
+         Si vous n'êtes pas à l'origine de cette demande, ignorez cet email : \
+         votre mot de passe actuel reste valable et personne n'a eu accès à \
+         votre compte.\n",
+        minutes = expires_in_minutes,
+        lien = reset_url,
+    );
+
+    let html = format!(
+        "<!DOCTYPE html><html lang=\"fr\"><body \
+         style=\"font-family:system-ui,sans-serif;color:#1a1a1a;line-height:1.5\">\
+         <p>Bonjour,</p>\
+         <p>Une réinitialisation de mot de passe a été demandée pour ce compte \
+         DernièreChance. Pour choisir un nouveau mot de passe, ouvrez ce lien dans \
+         les {minutes} minutes :</p>\
+         <p><a href=\"{lien}\">Choisir un nouveau mot de passe</a></p>\
+         <p>Passé ce délai, le lien ne fonctionnera plus et il faudra en demander un \
+         autre. Il ne fonctionne qu'une seule fois.</p>\
+         <hr>\
+         <p style=\"font-size:12px;color:#666\">Si vous n'êtes pas à l'origine de cette \
+         demande, ignorez cet email : votre mot de passe actuel reste valable et \
+         personne n'a eu accès à votre compte.</p>\
+         </body></html>",
+        minutes = expires_in_minutes,
+        lien = escape_html(reset_url),
+    );
+
+    RenderedEmail {
+        subject,
+        text,
+        html,
+    }
+}
+
 /// « 3,20 € » : montant à deux décimales, virgule décimale française.
 fn euros(amount: Decimal) -> String {
     format!("{amount:.2} €").replace('.', ",")
@@ -262,6 +312,35 @@ mod tests {
             "https://derniere-chance.ecosolva.org",
         );
         assert!(!email.text.contains("org//offre"), "{}", email.text);
+    }
+
+    /// Le message part parfois vers quelqu'un qui n'a rien demandé : il ne
+    /// doit donc rien révéler du compte, pas même l'adresse visée.
+    #[test]
+    fn le_message_de_reinitialisation_ne_nomme_pas_le_compte() {
+        let email = password_reset_email(
+            "https://derniere-chance.ecosolva.org/mot-de-passe?token=abc",
+            60,
+        );
+
+        assert!(email.text.contains("60 minutes"), "{}", email.text);
+        assert!(
+            email
+                .text
+                .contains("https://derniere-chance.ecosolva.org/mot-de-passe?token=abc"),
+            "{}",
+            email.text
+        );
+        assert!(
+            email.text.contains("ignorez cet email"),
+            "aucune consigne pour un destinataire qui n'a rien demandé : {}",
+            email.text
+        );
+        assert!(
+            !email.text.contains('@'),
+            "adresse divulguée : {}",
+            email.text
+        );
     }
 
     #[test]

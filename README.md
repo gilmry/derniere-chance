@@ -54,6 +54,10 @@ le rapport (vidéos incluses) est publié sur GitHub Pages.
 
 ## Documentation complémentaire
 
+- [`docs/reinitialisation-mot-de-passe.md`](./docs/reinitialisation-mot-de-passe.md) —
+  parcours « mot de passe oublié » pour les clients et les commerçants : ce qui
+  est tenu (pas d'oracle d'existence de compte, lien à usage unique) et ce qui
+  ne l'est pas.
 - [`docs/emails.md`](./docs/emails.md) — envoi des alertes « nouvelle
   démarque » aux abonnés : les trois adaptateurs et leur ordre de choix, mise
   en service d'un relais SMTP (jeton, SPF/DKIM), et décisions inscrites dans

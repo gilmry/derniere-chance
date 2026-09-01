@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use serde_json::{json, Value};
 
-use super::message::new_offer_email;
+use super::message::{new_offer_email, password_reset_email, RenderedEmail};
 use super::non_empty_env;
 use crate::application::ports::{EmailError, EmailSender};
 use crate::domain::entities::{Merchant, Product};
@@ -48,8 +48,43 @@ impl MailjetEmailSender {
     }
 
     fn new_offer_payload(&self, to_email: &str, merchant: &Merchant, product: &Product) -> Value {
-        let email = new_offer_email(merchant, product, &self.app_base_url);
+        self.payload(
+            to_email,
+            new_offer_email(merchant, product, &self.app_base_url),
+        )
+    }
 
+    /// Poste un message et traduit la réponse en `Result`.
+    async fn post(&self, payload: Value) -> Result<(), EmailError> {
+        let response = self
+            .client
+            .post(&self.endpoint)
+            .basic_auth(&self.api_key, Some(&self.secret_key))
+            .json(&payload)
+            .send()
+            .await
+            .map_err(|err| EmailError::SendFailed(err.to_string()))?;
+
+        let status = response.status();
+        // Le corps détaille la cause (expéditeur non validé, clé sans droit,
+        // compte suspendu...). Sans lui, un 401 est indébogable depuis les
+        // journaux.
+        let body = response.text().await.unwrap_or_default();
+
+        if !status.is_success() {
+            return Err(EmailError::SendFailed(format!(
+                "mailjet returned {status}: {body}"
+            )));
+        }
+
+        // Mailjet v3.1 peut répondre 200 tout en refusant le message : le
+        // verdict par destinataire est dans `Messages[].Status`, pas dans le
+        // code HTTP. Sans cette vérification, un envoi refusé serait journalisé
+        // comme `Envoyee`.
+        ensure_all_messages_succeeded(&body)
+    }
+
+    fn payload(&self, to_email: &str, email: RenderedEmail) -> Value {
         json!({
             "Messages": [{
                 "From": { "Email": self.from_email, "Name": self.from_name },
@@ -73,32 +108,21 @@ impl EmailSender for MailjetEmailSender {
         merchant: &Merchant,
         product: &Product,
     ) -> Result<(), EmailError> {
-        let response = self
-            .client
-            .post(&self.endpoint)
-            .basic_auth(&self.api_key, Some(&self.secret_key))
-            .json(&self.new_offer_payload(to_email, merchant, product))
-            .send()
+        self.post(self.new_offer_payload(to_email, merchant, product))
             .await
-            .map_err(|err| EmailError::SendFailed(err.to_string()))?;
+    }
 
-        let status = response.status();
-        // Le corps détaille la cause (expéditeur non validé, clé sans droit,
-        // compte suspendu...). Sans lui, un 401 est indébogable depuis les
-        // journaux.
-        let body = response.text().await.unwrap_or_default();
-
-        if !status.is_success() {
-            return Err(EmailError::SendFailed(format!(
-                "mailjet returned {status}: {body}"
-            )));
-        }
-
-        // Mailjet v3.1 peut répondre 200 tout en refusant le message : le
-        // verdict par destinataire est dans `Messages[].Status`, pas dans le
-        // code HTTP. Sans cette vérification, un envoi refusé serait journalisé
-        // comme `Envoyee`.
-        ensure_all_messages_succeeded(&body)
+    async fn send_password_reset(
+        &self,
+        to_email: &str,
+        reset_url: &str,
+        expires_in_minutes: i64,
+    ) -> Result<(), EmailError> {
+        let payload = self.payload(
+            to_email,
+            password_reset_email(reset_url, expires_in_minutes),
+        );
+        self.post(payload).await
     }
 }
 

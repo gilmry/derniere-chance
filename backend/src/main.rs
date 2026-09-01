@@ -6,16 +6,16 @@ use actix_web::{web, App, HttpServer};
 use derniere_chance_api::application::ports::EventNotifier;
 use derniere_chance_api::application::use_cases::{
     AdminAuthUseCases, AdminUseCases, CatalogUseCases, ConsentUseCases, ConsumerAuthUseCases,
-    DashboardUseCases, MerchantAuthUseCases, OAuthUseCases, ProductUseCases, ReservationUseCases,
-    SubscriptionUseCases,
+    DashboardUseCases, MerchantAuthUseCases, OAuthUseCases, PasswordResetUseCases, ProductUseCases,
+    ReservationUseCases, SubscriptionUseCases,
 };
 use derniere_chance_api::infrastructure::bootstrap::bootstrap_admin;
 use derniere_chance_api::infrastructure::database::create_pool;
 use derniere_chance_api::infrastructure::database::repositories::{
     PostgresAdminRepository, PostgresAuthorizationCodeRepository, PostgresConsentRepository,
     PostgresConsumerRepository, PostgresMerchantRepository, PostgresNotificationRepository,
-    PostgresOAuthClientRepository, PostgresProductRepository, PostgresRefreshTokenRepository,
-    PostgresReservationRepository, PostgresSubscriptionRepository,
+    PostgresOAuthClientRepository, PostgresPasswordResetRepository, PostgresProductRepository,
+    PostgresRefreshTokenRepository, PostgresReservationRepository, PostgresSubscriptionRepository,
 };
 use derniere_chance_api::infrastructure::email::sender_from_env;
 use derniere_chance_api::infrastructure::notifications::WebhookNotifier;
@@ -59,6 +59,12 @@ async fn main() -> std::io::Result<()> {
     let oauth_client_repo = Arc::new(PostgresOAuthClientRepository::new(db.clone()));
     let oauth_code_repo = Arc::new(PostgresAuthorizationCodeRepository::new(db.clone()));
     let oauth_refresh_repo = Arc::new(PostgresRefreshTokenRepository::new(db.clone()));
+    let password_reset_repo = Arc::new(PostgresPasswordResetRepository::new(db.clone()));
+
+    // Base des liens envoyés par email (fiche offre, profil, réinitialisation
+    // de mot de passe). Les adaptateurs d'envoi lisent la même variable.
+    let app_base_url = std::env::var("APP_BASE_URL")
+        .unwrap_or_else(|_| "https://derniere-chance.ecosolva.org".to_string());
 
     // SMTP, Mailjet ou simple journalisation selon ce qui est configuré (voir
     // `infrastructure::email::sender_from_env`). Le nom est journalisé au
@@ -104,6 +110,13 @@ async fn main() -> std::io::Result<()> {
             event_notifier.clone(),
         )),
         admin_auth_use_cases: Arc::new(AdminAuthUseCases::new(admin_repo, jwt_secret)),
+        password_reset_use_cases: Arc::new(PasswordResetUseCases::new(
+            consumer_repo.clone(),
+            merchant_repo.clone(),
+            password_reset_repo,
+            email_sender.clone(),
+            app_base_url,
+        )),
         consent_use_cases: Arc::new(ConsentUseCases::new(
             consent_repo,
             consumer_repo.clone(),

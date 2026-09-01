@@ -26,4 +26,23 @@ impl EmailSender for LoggingEmailSender {
         );
         Ok(())
     }
+
+    async fn send_password_reset(
+        &self,
+        to_email: &str,
+        reset_url: &str,
+        expires_in_minutes: i64,
+    ) -> Result<(), EmailError> {
+        // Le lien est journalisé en clair, à dessein : sans transporteur
+        // configuré, c'est le seul moyen d'éprouver le parcours en dev. Ces
+        // journaux ne quittent pas la machine de développement, et en
+        // production un transporteur est configuré.
+        tracing::info!(
+            to = %to_email,
+            %reset_url,
+            expires_in_minutes,
+            "would send: password reset email"
+        );
+        Ok(())
+    }
 }

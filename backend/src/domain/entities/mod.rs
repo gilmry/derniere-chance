@@ -1,3 +1,4 @@
+mod account;
 mod admin;
 mod consent;
 mod consumer;
@@ -8,6 +9,7 @@ mod product;
 mod reservation;
 mod subscription;
 
+pub use account::AccountSubject;
 pub use admin::Admin;
 pub use consent::{BetaConsent, ConsentSubject};
 pub use consumer::Consumer;

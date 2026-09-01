@@ -36,6 +36,17 @@ pub fn configure_routes(cfg: &mut web::ServiceConfig) {
             "/consommateurs/connexion",
             web::post().to(handlers::consumer_auth::login),
         )
+        // Réinitialisation de mot de passe (non authentifié, consommateurs et
+        // marchands par la même paire de routes : c'est l'adresse qui désigne
+        // le compte, la personne n'a pas à savoir de quel type il est).
+        .route(
+            "/mot-de-passe/oubli",
+            web::post().to(handlers::password_reset::forgot),
+        )
+        .route(
+            "/mot-de-passe/reinitialisation",
+            web::post().to(handlers::password_reset::reset),
+        )
         // Marchand backoffice (auth: marchand + consentement bêta)
         .route("/marchands/moi", web::get().to(handlers::merchant_auth::me))
         .route(

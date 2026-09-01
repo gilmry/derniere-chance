@@ -53,6 +53,7 @@ Et une chose à mi-chemin : la fiche marchand affiche une **note** (⭐ 4.8). El
 **In**
 - Back-office marchand : inscription, authentification, CRUD produits en démarque.
 - Compte consommateur (email + mot de passe), connexion/inscription.
+- Réinitialisation du mot de passe par email, pour les clients comme pour les commerçants (voir `docs/reinitialisation-mot-de-passe.md`).
 - Feed géolocalisé (carte + liste) des paniers disponibles, filtrable par catégorie.
 - Fiche marchand : infos, note, offres actives, suivi/désabonnement.
 - Réservation d'un panier → code de retrait à présenter en boutique, décrément de la quantité disponible.

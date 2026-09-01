@@ -256,6 +256,29 @@ export function consumerLogin(email: string, password: string): Promise<AuthResp
   return apiFetch("/consommateurs/connexion", { method: "POST", body: { email, password } });
 }
 
+// --- Réinitialisation de mot de passe (non authentifié) ---
+
+/// Longueur minimale imposée par le backend (domain/services/password.rs).
+/// Répétée ici pour que le formulaire refuse avant l'aller-retour ; c'est le
+/// backend qui fait foi.
+export const MIN_PASSWORD_LENGTH = 12;
+
+/// Répond toujours 204, que le compte existe ou non : le backend refuse de
+/// dire qui est inscrit, et l'écran ne doit pas le déduire non plus.
+/// La même route sert aux comptes clients et marchands.
+export function forgotPassword(email: string): Promise<void> {
+  return apiFetch("/mot-de-passe/oubli", { method: "POST", body: { email } });
+}
+
+/// `token` vient du lien reçu par email. Un 400 signale un lien invalide,
+/// expiré, déjà utilisé, ou un mot de passe refusé.
+export function resetPassword(token: string, password: string): Promise<void> {
+  return apiFetch("/mot-de-passe/reinitialisation", {
+    method: "POST",
+    body: { token, password },
+  });
+}
+
 // --- Consentement au programme bêta (auth: consommateur) ---
 
 export interface ConsentStatus {

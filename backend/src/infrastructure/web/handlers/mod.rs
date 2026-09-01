@@ -5,6 +5,7 @@ mod consent_handlers;
 mod consumer_auth_handlers;
 mod dashboard_handlers;
 mod merchant_auth_handlers;
+mod password_reset_handlers;
 mod photo_handlers;
 mod product_handlers;
 mod reservation_handlers;
@@ -37,6 +38,10 @@ pub mod consumer_auth {
 
 pub mod merchant_auth {
     pub use super::merchant_auth_handlers::{login, me, register, update_me};
+}
+
+pub mod password_reset {
+    pub use super::password_reset_handlers::{forgot, reset};
 }
 
 pub mod admin_auth {

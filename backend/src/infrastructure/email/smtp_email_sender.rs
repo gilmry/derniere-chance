@@ -3,7 +3,7 @@ use lettre::message::{Mailbox, MultiPart};
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
 
-use super::message::new_offer_email;
+use super::message::{new_offer_email, password_reset_email, RenderedEmail};
 use super::non_empty_env;
 use crate::application::ports::{EmailError, EmailSender};
 use crate::domain::entities::{Merchant, Product};
@@ -88,16 +88,8 @@ impl SmtpEmailSender {
     }
 }
 
-#[async_trait]
-impl EmailSender for SmtpEmailSender {
-    async fn send_new_offer_notification(
-        &self,
-        to_email: &str,
-        merchant: &Merchant,
-        product: &Product,
-    ) -> Result<(), EmailError> {
-        let rendered = new_offer_email(merchant, product, &self.app_base_url);
-
+impl SmtpEmailSender {
+    async fn send(&self, to_email: &str, rendered: RenderedEmail) -> Result<(), EmailError> {
         let to: Mailbox = to_email
             .parse()
             .map_err(|err| EmailError::SendFailed(format!("adresse invalide {to_email}: {err}")))?;
@@ -121,6 +113,35 @@ impl EmailSender for SmtpEmailSender {
             .map_err(|err| EmailError::SendFailed(format!("smtp: {err}")))?;
 
         Ok(())
+    }
+}
+
+#[async_trait]
+impl EmailSender for SmtpEmailSender {
+    async fn send_new_offer_notification(
+        &self,
+        to_email: &str,
+        merchant: &Merchant,
+        product: &Product,
+    ) -> Result<(), EmailError> {
+        self.send(
+            to_email,
+            new_offer_email(merchant, product, &self.app_base_url),
+        )
+        .await
+    }
+
+    async fn send_password_reset(
+        &self,
+        to_email: &str,
+        reset_url: &str,
+        expires_in_minutes: i64,
+    ) -> Result<(), EmailError> {
+        self.send(
+            to_email,
+            password_reset_email(reset_url, expires_in_minutes),
+        )
+        .await
     }
 }
 

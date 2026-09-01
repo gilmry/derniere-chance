@@ -7,6 +7,7 @@ mod event_notifier;
 mod merchant_repository;
 mod notification_repository;
 mod oauth_repository;
+mod password_reset_repository;
 mod product_repository;
 mod reservation_repository;
 mod subscription_repository;
@@ -23,6 +24,7 @@ pub use oauth_repository::{
     AuthorizationCodeRepository, NewAuthorizationCode, NewOAuthClient, NewRefreshToken,
     OAuthClientRepository, RefreshTokenRepository,
 };
+pub use password_reset_repository::{NewPasswordReset, PasswordResetRepository};
 pub use product_repository::{NewProduct, ProductRepository, ProductUpdate, ProductWithMerchant};
 pub use reservation_repository::{
     ConsumerStats, MerchantDailyStats, NewReservation, ReservationRepository, ReservationSummary,

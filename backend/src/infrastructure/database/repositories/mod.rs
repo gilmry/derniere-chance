@@ -4,6 +4,7 @@ mod consumer_repository_impl;
 mod merchant_repository_impl;
 mod notification_repository_impl;
 mod oauth_repository_impl;
+mod password_reset_repository_impl;
 mod product_repository_impl;
 mod reservation_repository_impl;
 mod subscription_repository_impl;
@@ -17,6 +18,7 @@ pub use oauth_repository_impl::{
     PostgresAuthorizationCodeRepository, PostgresOAuthClientRepository,
     PostgresRefreshTokenRepository,
 };
+pub use password_reset_repository_impl::PostgresPasswordResetRepository;
 pub use product_repository_impl::PostgresProductRepository;
 pub use reservation_repository_impl::PostgresReservationRepository;
 pub use subscription_repository_impl::PostgresSubscriptionRepository;

@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use crate::application::use_cases::{
     AdminAuthUseCases, AdminUseCases, CatalogUseCases, ConsentUseCases, ConsumerAuthUseCases,
-    DashboardUseCases, MerchantAuthUseCases, OAuthUseCases, ProductUseCases, ReservationUseCases,
-    SubscriptionUseCases,
+    DashboardUseCases, MerchantAuthUseCases, OAuthUseCases, PasswordResetUseCases, ProductUseCases,
+    ReservationUseCases, SubscriptionUseCases,
 };
 use crate::infrastructure::storage::PhotoStorage;
 
@@ -12,6 +12,7 @@ pub struct AppState {
     pub merchant_auth_use_cases: Arc<MerchantAuthUseCases>,
     pub consumer_auth_use_cases: Arc<ConsumerAuthUseCases>,
     pub admin_auth_use_cases: Arc<AdminAuthUseCases>,
+    pub password_reset_use_cases: Arc<PasswordResetUseCases>,
     pub consent_use_cases: Arc<ConsentUseCases>,
     pub admin_use_cases: Arc<AdminUseCases>,
     pub catalog_use_cases: Arc<CatalogUseCases>,

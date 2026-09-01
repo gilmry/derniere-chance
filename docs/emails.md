@@ -114,7 +114,10 @@ ailleurs. Le clair n'est jamais utilisé.
   envoi raté est tracé `echouee` et n'empêche ni la publication de la
   démarque, ni les notifications aux autres abonnés.
 
-## Contenu de l'email
+## Les deux messages
+
+**Alerte « nouvelle démarque »**, envoyée aux abonnés d'un marchand qui
+publie.
 
 Objet : `<nom du commerce> : <nom du panier>`. Corps en texte et en HTML, avec
 le prix démarqué, le prix initial et la remise, la quantité, le créneau de
@@ -123,3 +126,12 @@ retrait, l'adresse du commerce, un lien vers la fiche de l'offre
 avec le lien vers le profil (`APP_BASE_URL/profil`) où le testeur retire le
 marchand de ses suivis. Le rendu est couvert par les tests unitaires de
 `backend/src/infrastructure/email/message.rs`.
+
+**Lien de réinitialisation de mot de passe**, envoyé à qui le demande depuis
+`/mot-de-passe-oublie`. Objet : « Réinitialiser votre mot de passe
+DernièreChance ». Le message ne nomme ni le compte, ni la personne, ni même
+l'adresse visée : n'importe qui peut saisir une adresse dans le formulaire,
+donc il peut atterrir chez quelqu'un qui n'a rien demandé. Il dit quoi faire,
+la durée de validité du lien, et surtout quoi faire si on n'a rien demandé.
+Un test le vérifie explicitement. Le parcours complet est décrit dans
+[`reinitialisation-mot-de-passe.md`](./reinitialisation-mot-de-passe.md).

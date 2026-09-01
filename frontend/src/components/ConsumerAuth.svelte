@@ -69,6 +69,9 @@
     <button class="switch" type="button" on:click={() => (mode = mode === "register" ? "login" : "register")}>
       {mode === "register" ? "J'ai déjà un compte" : "Créer un compte"}
     </button>
+    {#if mode === "login"}
+      <a class="forgot" href="/mot-de-passe-oublie">Mot de passe oublié ?</a>
+    {/if}
   </div>
 </div>
 
@@ -133,6 +136,13 @@
   .error {
     color: #c0392b;
     font-size: 13px;
+  }
+
+  .forgot {
+    color: var(--color-muted);
+    font-size: 13px;
+    text-align: center;
+    padding: 4px;
   }
 
   .switch {

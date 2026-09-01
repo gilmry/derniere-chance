@@ -8,7 +8,8 @@ mod product;
 mod reservation;
 
 pub use auth::{
-    AuthResponse, Claims, LoginRequest, RegisterConsumerRequest, RegisterMerchantRequest,
+    AuthResponse, Claims, ForgotPasswordRequest, LoginRequest, RegisterConsumerRequest,
+    RegisterMerchantRequest, ResetPasswordRequest,
 };
 pub use catalog::{MerchantProfileDto, OfferDto};
 pub use consent::{ConsentStatusDto, GrantConsentRequest};

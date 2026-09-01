@@ -157,10 +157,7 @@ impl ConsentUseCases {
     /// Portier utilisé par les extracteurs `ConsentedConsumer` et
     /// `ConsentedMerchant` : vrai seulement si le consentement porte sur la
     /// version en vigueur.
-    pub async fn has_current_consent(
-        &self,
-        subject: ConsentSubject,
-    ) -> Result<bool, ConsentError> {
+    pub async fn has_current_consent(&self, subject: ConsentSubject) -> Result<bool, ConsentError> {
         Ok(self
             .consent_repo
             .find_active(subject)
@@ -267,6 +264,9 @@ mod tests {
 
     #[async_trait::async_trait]
     impl ConsumerRepository for FakeConsumerRepo {
+        async fn update_password(&self, _id: Uuid, _password_hash: &str) -> Result<(), RepoError> {
+            unimplemented!("hors du périmètre du consentement")
+        }
         async fn create(&self, _new: NewConsumer) -> Result<Consumer, RepoError> {
             unimplemented!("hors du périmètre du consentement")
         }
@@ -298,6 +298,9 @@ mod tests {
 
     #[async_trait::async_trait]
     impl MerchantRepository for FakeMerchantRepo {
+        async fn update_password(&self, _id: Uuid, _password_hash: &str) -> Result<(), RepoError> {
+            unimplemented!("hors du périmètre du consentement")
+        }
         async fn create(&self, _new: NewMerchant) -> Result<Merchant, RepoError> {
             unimplemented!("hors du périmètre du consentement")
         }
@@ -543,7 +546,10 @@ mod tests {
 
         assert_eq!(h.consents.history_len(), 1);
         // La date d'origine fait foi, un second clic ne la repousse pas.
-        assert_eq!(h.use_cases.status(subject).await.unwrap().accepte_le, premier);
+        assert_eq!(
+            h.use_cases.status(subject).await.unwrap().accepte_le,
+            premier
+        );
     }
 
     // --- Retrait ---

@@ -67,6 +67,23 @@ impl ConsumerRepository for PostgresConsumerRepository {
             .map_err(Into::into)
     }
 
+    async fn update_password(&self, id: Uuid, password_hash: &str) -> Result<(), RepoError> {
+        // `anonymise_le IS NULL` fait le gardien en base plutôt qu'au-dessus :
+        // un compte dont le consentement a été retiré ne doit pas pouvoir se
+        // rouvrir, quel que soit le chemin applicatif qui y mène.
+        sqlx::query(
+            "UPDATE consommateurs
+                SET password_hash = $2
+              WHERE id = $1 AND anonymise_le IS NULL",
+        )
+        .bind(id)
+        .bind(password_hash)
+        .execute(&self.pool)
+        .await
+        .map(|_| ())
+        .map_err(Into::into)
+    }
+
     async fn anonymize(&self, id: Uuid) -> Result<(), RepoError> {
         // L'email est dérivé de l'UUID, qui est déjà la clé primaire : il ne
         // révèle donc rien de plus que ce que la ligne portait déjà, tout en

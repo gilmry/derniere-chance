@@ -1,0 +1,10 @@
+---
+// output:"static" prérend cette page une fois : le jeton (?token=...) n'est
+// pas connu ici, ResetPassword le lit lui-même côté client au montage.
+import AppLayout from "../layouts/AppLayout.astro";
+import ResetPassword from "../components/ResetPassword.svelte";
+---
+
+<AppLayout title="Nouveau mot de passe">
+  <ResetPassword client:load />
+</AppLayout>

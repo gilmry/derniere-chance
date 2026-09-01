@@ -100,6 +100,9 @@
     >
       {mode === "register" ? "J'ai déjà un compte" : "Créer un compte marchand"}
     </button>
+    {#if mode === "login"}
+      <a class="forgot" href="/mot-de-passe-oublie">Mot de passe oublié ?</a>
+    {/if}
   </form>
 </div>
 
@@ -193,6 +196,14 @@
   .error {
     color: #ff8a80;
     font-size: 13px;
+  }
+
+  .forgot {
+    color: var(--color-muted);
+    font-size: 13px;
+    text-align: center;
+    padding: 4px;
+    text-decoration: none;
   }
 
   .switch {
