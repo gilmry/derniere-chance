@@ -66,7 +66,11 @@ services:
   # les appels de koprogo et de taginy, qui atterrissaient ici avec leurs
   # propres credentials. Le nom long est unique sur le reseau partage.
   derniere-chance-minio:
-    image: minio/minio:latest
+    # Fork communautaire pgsty (decision du 2026-10-29) : minio/minio a quitte
+    # Docker Hub et MinIO ne publie plus d'images communautaires. Epingle par
+    # tag date ET digest ; monter de version = nouveau commit, apres sauvegarde
+    # du volume minio_data.
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z@sha256:b6bfe7239bfc83fb90d31612d9704d86039dd714f7904b3f1ad68f211e602372
     container_name: derniere-chance-minio
     restart: unless-stopped
     logging: *journaux
@@ -99,7 +103,8 @@ services:
 
   # One-shot: creates the `photos` bucket and makes it public-read, then exits.
   minio-bootstrap:
-    image: minio/mc:latest
+    # Fork communautaire pgsty, epingle par tag date et digest.
+    image: pgsty/mc:RELEASE.2026-10-18T00-00-00Z@sha256:6ecdaec70bc5e8cf9d0e9a70c190f3beb1c83f11617ff4333f1fcd71ab1daf18
     container_name: derniere-chance-minio-bootstrap
     depends_on:
       derniere-chance-minio:
