@@ -94,6 +94,8 @@ export interface Offer {
   marchand_note: string | null;
   marchand_latitude: number | null;
   marchand_longitude: number | null;
+  /// Logo du commerce (null s'il n'en a pas envoyé).
+  marchand_logo_url: string | null;
   distance_km: number | null;
   nom: string;
   description: string;
@@ -111,10 +113,15 @@ export interface Merchant {
   id: string;
   nom: string;
   adresse: string;
+  /// Code ISO du pays (« FR », « BE »...), voir lib/pays.ts.
+  pays: string;
   categorie: string;
   note: string | null;
   latitude: number | null;
   longitude: number | null;
+  /// false : commerce non trouvé, ajouté manuellement par le commerçant
+  /// (case cochée). La position est celle de l'adresse, ou de la ville.
+  adresse_verifiee: boolean;
   logo_url: string | null;
   distance_km: number | null;
 }
@@ -138,20 +145,35 @@ export interface MerchantProfile extends Merchant {
   offres: Product[];
 }
 
-export interface ReservationConfirmation {
-  id: string;
-  code: string;
-  statut: ReservationStatus;
-  marchand_nom: string;
+/// Un panier d'une réservation (une réservation peut en regrouper plusieurs,
+/// du même commerce, sous un seul code).
+export interface LigneReservation {
+  produit_id: string;
   produit_nom: string;
+  quantite: number;
   prix_demarque: string;
   retrait_debut: string;
   retrait_fin: string;
 }
 
+export interface ReservationConfirmation {
+  id: string;
+  code: string;
+  statut: ReservationStatus;
+  marchand_nom: string;
+  /// Résumé des paniers (« 2 × Panier A, Panier B »).
+  produit_nom: string;
+  /// Total de la réservation.
+  prix_demarque: string;
+  retrait_debut: string;
+  retrait_fin: string;
+  lignes: LigneReservation[];
+}
+
 export interface ReservationSummary {
   id: string;
   code: string;
+  quantite: number;
   statut: ReservationStatus;
   marchand_nom: string;
   produit_nom: string;
@@ -206,6 +228,18 @@ export function getMerchantProfile(id: string, coords?: Coords | null): Promise<
 
 // --- Auth marchand ---
 
+/// Commerce non trouvé à cette adresse (422) : le commerçant peut corriger
+/// le nom ou l'adresse, ou cocher la case pour l'ajouter manuellement.
+export function isEtablissementIntrouvable(err: unknown): boolean {
+  return err instanceof ApiError && err.status === 422;
+}
+
+/// Adresses complètes proposées pendant la saisie, limitées au pays choisi.
+export function suggestAddresses(saisie: string, pays: string): Promise<string[]> {
+  const params = new URLSearchParams({ q: saisie, pays });
+  return apiFetch(`/adresses/suggestions?${params}`);
+}
+
 /// Comme pour un consommateur, l'inscription porte le consentement bêta : le
 /// backend refuse la requête si la version envoyée n'est pas celle en
 /// vigueur. Le marchand publie nom, adresse et position sur la carte, donc la
@@ -213,11 +247,14 @@ export function getMerchantProfile(id: string, coords?: Coords | null): Promise<
 export function merchantRegister(dto: {
   nom: string;
   adresse: string;
+  /// La position du commerce est calculée par le backend depuis l'adresse et
+  /// le pays : la position du navigateur n'est plus envoyée.
+  pays: string;
   categorie: string;
   email: string;
   password: string;
-  latitude?: number | null;
-  longitude?: number | null;
+  /// Case cochée : commerce non trouvé, ajouté manuellement.
+  adresse_confirmee?: boolean;
 }): Promise<AuthResponse> {
   return apiFetch("/marchands/inscription", {
     method: "POST",
@@ -234,7 +271,13 @@ export function getMyMerchantProfile(token: string): Promise<Merchant> {
 }
 
 export function updateMerchantProfile(
-  dto: { nom: string; adresse: string; categorie: string },
+  dto: {
+    nom: string;
+    adresse: string;
+    pays: string;
+    categorie: string;
+    adresse_confirmee?: boolean;
+  },
   token: string,
 ): Promise<Merchant> {
   return apiFetch("/marchands/moi", { method: "PATCH", body: dto, token });
@@ -330,6 +373,15 @@ export function withdrawConsent(
 
 export function reserveOffer(offerId: string, token: string): Promise<ReservationConfirmation> {
   return apiFetch(`/offres/${offerId}/reservation`, { method: "POST", token });
+}
+
+/// Plusieurs paniers d'un même commerce en une fois, un seul code de retrait.
+/// Tout ou rien : si un panier n'est plus disponible, rien n'est réservé.
+export function reserveSeveral(
+  lignes: { offre_id: string; quantite: number }[],
+  token: string,
+): Promise<ReservationConfirmation> {
+  return apiFetch("/consommateurs/moi/reservations", { method: "POST", token, body: { lignes } });
 }
 
 export function followMerchant(merchantId: string, token: string): Promise<void> {
@@ -457,11 +509,14 @@ export interface AdminMerchant {
   id: string;
   nom: string;
   adresse: string;
+  pays: string;
   categorie: string;
   note: string | null;
   email: string;
   latitude: number | null;
   longitude: number | null;
+  /// Date à laquelle le commerçant a ajouté manuellement un commerce non trouvé.
+  adresse_confirmee_le: string | null;
   logo_url: string | null;
   created_at: string;
   /// Renseigné après retrait du consentement bêta : nom, adresse et position

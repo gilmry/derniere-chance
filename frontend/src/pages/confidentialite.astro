@@ -250,15 +250,35 @@ const contactEmail = import.meta.env.PUBLIC_LEGAL_CONTACT_EMAIL ?? "gilmry@gmail
         </li>
       </ul>
       <p>
+        Pour placer un commerce sur la carte, son <strong>nom et son
+        adresse</strong> sont transmis par notre serveur à deux services
+        publics de recherche d'adresses issus d'OpenStreetMap. Ils ne reçoivent
+        ni votre email, ni votre mot de passe, ni l'adresse IP de votre
+        appareil :
+      </p>
+      <ul>
+        <li>
+          <strong>Nominatim</strong> (Fondation OpenStreetMap, Royaume-Uni),
+          qui vérifie l'adresse et retrouve le commerce, à l'inscription et à
+          chaque changement de nom ou d'adresse.
+        </li>
+        <li>
+          <strong>Photon</strong> (komoot GmbH, Allemagne), qui propose des
+          adresses complètes pendant que le commerçant tape la sienne : il
+          reçoit donc aussi le début de l'adresse en cours de saisie.
+        </li>
+      </ul>
+      <p>
         Les commerçants concernés voient les réservations qui leur sont
         destinées, ce qui est le principe même du service. Aucune donnée n'est
         vendue, louée ou communiquée à un tiers à des fins publicitaires.
       </p>
       <p>
-        Le seul transfert hors de l'Union européenne est celui de votre adresse
-        vers la Suisse, où se trouve Proton, quand un email vous est envoyé. La
-        Commission européenne reconnaît à la Suisse un niveau de protection
-        adéquat, ce transfert est donc encadré par le RGPD sans formalité
+        Deux transferts sortent de l'Union européenne : votre adresse email
+        vers la Suisse, où se trouve Proton, quand un email vous est envoyé, et
+        le nom et l'adresse d'un commerce vers le Royaume-Uni (Nominatim). La
+        Commission européenne reconnaît à ces deux pays un niveau de protection
+        adéquat, ces transferts sont donc encadrés par le RGPD sans formalité
         supplémentaire. Aucune de vos données ne part vers un pays dépourvu
         d'une telle reconnaissance.
       </p>

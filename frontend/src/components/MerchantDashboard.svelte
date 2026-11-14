@@ -9,6 +9,7 @@
     getMyMerchantProfile,
     updateMerchantProfile,
     uploadMerchantLogo,
+    isEtablissementIntrouvable,
     formatPrice,
     ApiError,
     MERCHANT_CATEGORIES,
@@ -17,6 +18,8 @@
     type Merchant,
   } from "../lib/api";
   import { getMerchantToken, clearMerchantToken } from "../lib/auth";
+  import { PAYS, nomDuPays } from "../lib/pays";
+  import AddressInput from "./AddressInput.svelte";
 
   function logout() {
     clearMerchantToken();
@@ -56,16 +59,29 @@
   let editingProfile = false;
   let profileNom = "";
   let profileAdresse = "";
+  let profilePays = "";
+  // Commerce non trouvé : case d'ajout manuel, comme à l'inscription. Elle
+  // disparaît dès que le nom, l'adresse ou le pays change.
+  let profileAdresseIntrouvable = false;
+  let profileAdresseConfirmee = false;
+  function profileAdresseModifiee() {
+    profileAdresseIntrouvable = false;
+    profileAdresseConfirmee = false;
+  }
   let profileCategorie = "";
   let profileSaving = false;
   let profileError = "";
+  // Adresse complétée par le backend (celle de l'établissement trouvé),
+  // signalée après l'enregistrement pour que le commerçant la vérifie.
+  let profileNotice = "";
 
   function startEditProfile() {
     if (!merchant) return;
     profileNom = merchant.nom;
     profileAdresse = merchant.adresse;
-    profileCategorie = merchant.categorie;
-    profileError = "";
+    profilePays = merchant.pays;
+    profileAdresseModifiee();
+    profileNotice = "";
     editingProfile = true;
   }
 
@@ -73,16 +89,31 @@
     event.preventDefault();
     const token = getMerchantToken();
     if (!token) return;
+    if (profileAdresseIntrouvable && !profileAdresseConfirmee) {
+      profileError =
+        "Vérifiez le nom et l'adresse, ou cochez la case pour ajouter votre commerce manuellement.";
+      return;
+    }
     profileSaving = true;
     profileError = "";
     try {
       merchant = await updateMerchantProfile(
-        { nom: profileNom, adresse: profileAdresse, categorie: profileCategorie },
+        {
+          nom: profileNom,
+          adresse: profileAdresse,
+          pays: profilePays,
+          categorie: profileCategorie,
+          adresse_confirmee: profileAdresseIntrouvable && profileAdresseConfirmee,
+        },
         token,
       );
+      if (merchant.adresse !== profileAdresse.trim()) {
+        profileNotice = `Adresse trouvée : ${merchant.adresse}`;
+      }
       editingProfile = false;
     } catch (err) {
       profileError = err instanceof ApiError ? err.message : "La mise à jour a échoué.";
+      if (isEtablissementIntrouvable(err)) profileAdresseIntrouvable = true;
     } finally {
       profileSaving = false;
     }
@@ -177,6 +208,8 @@
     try {
       const updated = await markEcoule(id, token);
       products = products.map((p) => (p.id === updated.id ? updated : p));
+      // Le panier quitte les « en ligne » : les compteurs du jour bougent.
+      merchantDashboard(token).then((s) => (stats = s)).catch(() => {});
     } catch {
       // le produit reste affiché comme actif, l'échec est silencieux ici (action secondaire)
     }
@@ -212,9 +245,23 @@
   {:else}
     {#if editingProfile}
       <form class="card profile-edit" on:submit={saveProfile}>
-        <input class="text-input" bind:value={profileNom} placeholder="Nom du commerce" required />
-        <input class="text-input" bind:value={profileAdresse} placeholder="Adresse" required />
-        <select class="text-input" bind:value={profileCategorie} required>
+        <input class="text-input" bind:value={profileNom} placeholder="Nom du commerce" on:input={profileAdresseModifiee} required />
+        <select class="text-input" aria-label="Pays" bind:value={profilePays} on:change={profileAdresseModifiee} required>
+          {#each PAYS as [code, nomPays]}
+            <option value={code}>{nomPays}</option>
+          {/each}
+        </select>
+        <AddressInput bind:value={profileAdresse} pays={profilePays} variant="light" on:input={profileAdresseModifiee} />
+        {#if profileAdresseIntrouvable}
+          <label class="address-confirm">
+            <input type="checkbox" bind:checked={profileAdresseConfirmee} />
+            <span>
+              Mon commerce n'a pas été trouvé, mais il existe bien à cette adresse :
+              je l'ajoute manuellement.
+            </span>
+          </label>
+        {/if}
+        <select class="text-input" aria-label="Catégorie" bind:value={profileCategorie} required>
           {#each Object.entries(MERCHANT_CATEGORIES) as [cat, emoji]}
             <option value={cat}>{emoji} {cat}</option>
           {/each}
@@ -231,10 +278,19 @@
       <div class="fiche-row">
         <div class="fiche-info">
           <div class="fiche-nom">{merchant.nom}</div>
-          <div class="fiche-detail">{merchant.categorie} · {merchant.adresse}</div>
+          <div class="fiche-detail">{merchant.categorie}</div>
+          <!-- Sur sa propre ligne, sans coupure : le commerçant doit pouvoir
+               relire l'adresse complète retenue pour son commerce. -->
+          <div class="fiche-adresse">{merchant.adresse}{merchant.adresse ? `, ${nomDuPays(merchant.pays)}` : ""}</div>
+          <div class="fiche-statut">
+            {merchant.adresse_verifiee
+              ? "✓ Commerce trouvé sur OpenStreetMap"
+              : "Commerce ajouté manuellement (non vérifié)"}
+          </div>
         </div>
         <button class="edit-link" type="button" on:click={startEditProfile}>Modifier</button>
       </div>
+      {#if profileNotice}<p class="pickup-result">{profileNotice}</p>{/if}
     {/if}
     <form class="pickup-check" on:submit={checkPickupCode}>
       <input
@@ -405,6 +461,34 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .fiche-adresse {
+    font-size: 12px;
+    color: var(--color-ink);
+    line-height: 1.35;
+  }
+
+  .fiche-statut {
+    font-size: 11px;
+    color: var(--color-muted);
+    margin-top: 2px;
+  }
+
+  .address-confirm {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .address-confirm input {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    margin-top: 1px;
+    accent-color: var(--color-primary);
   }
 
   .edit-link {

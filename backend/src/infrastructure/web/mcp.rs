@@ -22,7 +22,8 @@ use uuid::Uuid;
 
 use crate::application::dto::{CreateProductDto, UpdateMerchantDto};
 use crate::application::use_cases::{
-    DashboardError, MerchantAuthError, ProductError, ReservationError,
+    DashboardError, MerchantAuthError, ProductError, ReservationError, ADRESSE_INTROUVABLE,
+    ETABLISSEMENT_INTROUVABLE,
 };
 use crate::infrastructure::web::app_state::AppState;
 use crate::infrastructure::web::middleware::ConsentedMerchant;
@@ -232,12 +233,21 @@ fn tool_schemas() -> Vec<Value> {
         ),
         tool(
             "update_my_profile",
-            "Met à jour mon profil marchand (nom, adresse, catégorie).",
+            "Met à jour mon profil marchand (nom, adresse, pays, catégorie). La position \
+             sur la carte est recalculée depuis l'adresse et le pays.",
             json!({
                 "type": "object",
                 "properties": {
                     "nom": { "type": "string" },
                     "adresse": { "type": "string" },
+                    "pays": {
+                        "type": "string",
+                        "description": "Code ISO à deux lettres (FR, BE, DE...). Absent : pays actuel gardé.",
+                    },
+                    "adresse_confirmee": {
+                        "type": "boolean",
+                        "description": "À mettre à true seulement si le commerçant confirme que son commerce existe bien à cette adresse alors qu'il n'a pas été trouvé (ajout manuel).",
+                    },
                     "categorie": { "type": "string" },
                 },
                 "required": ["nom", "adresse", "categorie"],
@@ -386,6 +396,7 @@ fn reservation_error_message(err: &ReservationError) -> Option<String> {
         ReservationError::ReservationNotFound => Some("code de retrait introuvable".to_string()),
         ReservationError::Forbidden => Some("ce panier appartient à un autre marchand".to_string()),
         ReservationError::AlreadyRedeemed => Some(err.to_string()),
+        ReservationError::InvalidInput(msg) => Some(msg.clone()),
         ReservationError::ProductNotFound
         | ReservationError::SoldOut
         | ReservationError::CodeGenerationFailed
@@ -400,6 +411,12 @@ fn dashboard_error_message(_err: &DashboardError) -> Option<String> {
 fn merchant_auth_error_message(err: &MerchantAuthError) -> Option<String> {
     match err {
         MerchantAuthError::NotFound => Some("marchand introuvable".to_string()),
+        MerchantAuthError::InvalidInput(message) => Some(message.clone()),
+        MerchantAuthError::AdresseIntrouvable => Some(ADRESSE_INTROUVABLE.to_string()),
+        MerchantAuthError::EtablissementIntrouvable => Some(ETABLISSEMENT_INTROUVABLE.to_string()),
+        MerchantAuthError::GeocodingUnavailable => Some(
+            "la recherche d'adresse ne répond pas, réessayez dans quelques minutes".to_string(),
+        ),
         _ => None,
     }
 }

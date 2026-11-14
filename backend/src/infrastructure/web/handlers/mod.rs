@@ -22,7 +22,7 @@ pub use catalog_handlers::{get_merchant, get_offer, list_offers};
 pub use dashboard_handlers::{consumer_profile, merchant_today};
 pub use photo_handlers::{upload_logo, upload_photo};
 pub use product_handlers::{list_mine, mark_ecoule, publish, update_product};
-pub use reservation_handlers::{list_my_reservations, reserve, validate_pickup};
+pub use reservation_handlers::{list_my_reservations, reserve, reserve_several, validate_pickup};
 pub use subscription_handlers::{follow, list_followed, unfollow};
 
 pub mod consent {
@@ -37,7 +37,7 @@ pub mod consumer_auth {
 }
 
 pub mod merchant_auth {
-    pub use super::merchant_auth_handlers::{login, me, register, update_me};
+    pub use super::merchant_auth_handlers::{login, me, register, suggest_addresses, update_me};
 }
 
 pub mod password_reset {

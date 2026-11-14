@@ -42,6 +42,48 @@
   }
 
   $: featured = offers[0];
+
+  // La liste montre les commerces, pas les paniers : un commerce qui en
+  // propose plusieurs n'apparaît qu'une fois, et ses paniers se découvrent
+  // sur sa page (/marchand). Les offres arrivent triées par distance, donc
+  // l'ordre de première apparition garde les commerces les plus proches en tête.
+  interface CommerceAvecPaniers {
+    id: string;
+    nom: string;
+    categorie: string;
+    distance_km: number | null;
+    logo_url: string | null;
+    paniers: number;
+    prixMin: number;
+    reductionMax: number;
+  }
+
+  function regrouperParCommerce(liste: Offer[]): CommerceAvecPaniers[] {
+    const parId = new Map<string, CommerceAvecPaniers>();
+    for (const offer of liste) {
+      const prix = Number(offer.prix_demarque);
+      const commerce = parId.get(offer.marchand_id);
+      if (commerce) {
+        commerce.paniers += 1;
+        commerce.prixMin = Math.min(commerce.prixMin, prix);
+        commerce.reductionMax = Math.max(commerce.reductionMax, offer.reduction_pct);
+      } else {
+        parId.set(offer.marchand_id, {
+          id: offer.marchand_id,
+          nom: offer.marchand_nom,
+          categorie: offer.marchand_categorie,
+          distance_km: offer.distance_km,
+          logo_url: offer.marchand_logo_url,
+          paniers: 1,
+          prixMin: prix,
+          reductionMax: offer.reduction_pct,
+        });
+      }
+    }
+    return [...parId.values()];
+  }
+
+  $: commerces = regrouperParCommerce(offers);
 </script>
 
 <div class="screen">
@@ -93,21 +135,30 @@
     </div>
   {:else}
     <div class="list">
-      {#each offers as offer}
-        <a class="card offer-row" href={`/offre?id=${offer.id}`}>
+      {#each commerces as commerce (commerce.id)}
+        <a class="card offer-row" href={`/marchand?id=${commerce.id}`}>
           <div class="offer-photo">
-            <Photo shape="rounded" radius={14} label="Photo panier" src={offer.photo_url} />
+            <!-- Le logo, pas la photo d'un panier : la ligne représente le
+                 commerce. Sans logo, la vignette neutre « Logo » s'affiche. -->
+            <Photo shape="rounded" radius={14} label="Logo" src={commerce.logo_url} />
           </div>
           <div class="offer-info">
-            <div class="offer-name">{offer.marchand_nom}</div>
+            <div class="offer-name">{commerce.nom}</div>
             <div class="offer-detail">
-              {offer.nom} · {offer.quantite} restants
-              {#if formatDistance(offer.distance_km)} · {formatDistance(offer.distance_km)}{/if}
+              {MERCHANT_CATEGORIES[commerce.categorie] ?? ""} {commerce.categorie}
+              {#if formatDistance(commerce.distance_km)} · {formatDistance(commerce.distance_km)}{/if}
             </div>
             <div class="price-row">
-              <span class="price-old">{formatPrice(offer.prix_initial)}</span>
-              <span class="price-new">{formatPrice(offer.prix_demarque)}</span>
+              <span class="paniers">
+                {commerce.paniers} {commerce.paniers > 1 ? "paniers" : "panier"}
+              </span>
+              <span class="price-new">
+                {commerce.paniers > 1 ? "dès " : ""}{formatPrice(commerce.prixMin)}
+              </span>
             </div>
+          </div>
+          <div class="badge-discount">
+            {commerce.paniers > 1 ? "jusqu'à " : ""}-{commerce.reductionMax}%
           </div>
         </a>
       {/each}
@@ -278,6 +329,17 @@
 
   .price-new {
     font-size: 15px;
+  }
+
+  .paniers {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-ink);
+  }
+
+  .offer-row .badge-discount {
+    align-self: center;
+    white-space: nowrap;
   }
 
   .empty {

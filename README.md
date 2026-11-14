@@ -24,6 +24,22 @@ Voir [`VISION.md`](./VISION.md) pour le produit en détail.
   liens de réinitialisation de mot de passe, par relais SMTP (`lettre`) ; sans
   identifiants, le backend se rabat sur un adaptateur qui journalise seulement
   et le dit au démarrage.
+- **Géocodage** : la position d'un commerce sur la carte est calculée depuis
+  l'adresse et le pays saisis (32 pays européens : UE, Suisse, Royaume-Uni,
+  Norvège, Islande, Liechtenstein), à l'inscription et à chaque changement
+  d'adresse, par Nominatim (OpenStreetMap). Pendant la saisie, des
+  suggestions d'adresses complètes viennent de Photon (OpenStreetMap aussi,
+  via le backend). Le backend vérifie ensuite que le commerce existe : un
+  lieu de ce nom doit être connu d'OpenStreetMap près de l'adresse (300 m,
+  puis 1,5 km). Sinon, le commerçant est prévenu, avec un message qui dit si
+  c'est l'adresse ou le commerce qui n'a pas été trouvé, et peut l'ajouter
+  manuellement en cochant une case : la date de
+  cet ajout est gardée, le commerce est placé à son adresse (ou dans sa ville
+  si la rue est inconnue) et le backoffice le signale « commerce non
+  vérifié ». Le profil dev utilise
+  un géocodeur fictif (`GEOCODEUR_DEV`), voir `.env.example`. Détails, avec
+  la réservation de plusieurs paniers sous un seul code :
+  [`docs/geocodage-et-reservations.md`](./docs/geocodage-et-reservations.md).
 - **RGPD** : consentement explicite tracé pour le programme bêta, retrait en
   un clic avec anonymisation du compte, rétention des journaux bornée à
   30 jours (voir [`docs/rgpd/`](./docs/rgpd/)).

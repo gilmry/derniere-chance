@@ -27,13 +27,22 @@
   {#if confirmation}
     <div class="check">✓</div>
     <div class="heading">
-      <h1>Panier réservé !</h1>
+      <h1>{(confirmation.lignes?.reduce((n, l) => n + l.quantite, 0) ?? 1) > 1 ? "Paniers réservés !" : "Panier réservé !"}</h1>
       <p>Présente ce code en boutique</p>
     </div>
     <div class="code">{confirmation.code}</div>
     <div class="details">
       <div class="row"><span class="label">Commerçant</span><span class="value">{confirmation.marchand_nom}</span></div>
-      <div class="row"><span class="label">Panier</span><span class="value">{confirmation.produit_nom}</span></div>
+      {#if confirmation.lignes && confirmation.lignes.length > 1}
+        {#each confirmation.lignes as ligne}
+          <div class="row">
+            <span class="label">{ligne.quantite > 1 ? `${ligne.quantite} ×` : "Panier"}</span>
+            <span class="value">{ligne.produit_nom}</span>
+          </div>
+        {/each}
+      {:else}
+        <div class="row"><span class="label">Panier</span><span class="value">{confirmation.produit_nom}</span></div>
+      {/if}
       <div class="row"><span class="label">Retrait</span><span class="value">{pickupWindow(confirmation)}</span></div>
       <div class="row"><span class="label">Total</span><span class="value">{formatPrice(confirmation.prix_demarque)}</span></div>
     </div>

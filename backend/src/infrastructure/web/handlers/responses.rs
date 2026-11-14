@@ -17,6 +17,19 @@ pub fn conflict(message: &str) -> HttpResponse {
     HttpResponse::Conflict().json(json!({ "error": message }))
 }
 
+/// Erreur que le client sait traiter d'après `code`, pas seulement afficher.
+pub fn unprocessable(code: &str, message: &str) -> HttpResponse {
+    HttpResponse::UnprocessableEntity().json(json!({ "error": message, "code": code }))
+}
+
+pub fn too_many_requests(message: &str) -> HttpResponse {
+    HttpResponse::TooManyRequests().json(json!({ "error": message }))
+}
+
+pub fn service_unavailable(message: &str) -> HttpResponse {
+    HttpResponse::ServiceUnavailable().json(json!({ "error": message }))
+}
+
 pub fn internal_error() -> HttpResponse {
     HttpResponse::InternalServerError().json(json!({ "error": "internal error" }))
 }

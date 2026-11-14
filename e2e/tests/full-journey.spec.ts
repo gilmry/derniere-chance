@@ -19,6 +19,9 @@ const CONSUMER_EMAIL = `e2e-conso-${STAMP}@test.com`;
 // la réinitialisation.
 const PASSWORD = "mot-de-passe-e2e-2026";
 const BASKET_NAME = `Panier e2e ${STAMP}`;
+// Unique par exécution : le fil liste les commerces, et ceux des exécutions
+// précédentes peuvent y figurer encore.
+const MERCHANT_NAME = `Boulangerie e2e ${STAMP}`;
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? "admin@example.com";
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? "change-me-immediately";
 
@@ -27,9 +30,10 @@ test("marchand publie, consommateur réserve, marchand valide, admin nettoie", a
 
   await test.step("le marchand s'inscrit", async () => {
     await page.goto("/pro/login?mode=register");
-    await page.getByPlaceholder("Nom du commerce").fill("Boulangerie e2e");
+    await page.getByPlaceholder("Nom du commerce").fill(MERCHANT_NAME);
     await page.getByPlaceholder("Adresse").fill("Rue du Test 1, Bruxelles");
-    await page.getByRole("combobox").selectOption("Boulangerie");
+    await page.getByRole("combobox", { name: "Pays" }).selectOption("BE");
+    await page.getByRole("combobox", { name: "Catégorie" }).selectOption("Boulangerie");
     await page.getByPlaceholder("Email professionnel").fill(MERCHANT_EMAIL);
     await page.getByPlaceholder("Mot de passe").fill(PASSWORD);
     // Consentement bêta marchand : case obligatoire et jamais pré-cochée. Un
@@ -69,10 +73,10 @@ test("marchand publie, consommateur réserve, marchand valide, admin nettoie", a
   });
 
   await test.step("le consommateur suit le commerçant", async () => {
-    await expect(page.getByText(BASKET_NAME)).toBeVisible({ timeout: 15_000 });
-    await page.getByText(BASKET_NAME).click();
-    await page.waitForURL("**/offre?id=*");
-    await page.getByRole("link", { name: "Boulangerie e2e" }).click();
+    // Le fil liste les commerces ; leurs paniers sont sur leur page.
+    const commerce = page.getByRole("link", { name: MERCHANT_NAME });
+    await expect(commerce).toBeVisible({ timeout: 15_000 });
+    await commerce.click();
     await page.waitForURL("**/marchand?id=*");
     await page.getByRole("button", { name: "+ S'abonner" }).click();
     await expect(page.getByRole("button", { name: "✓ Abonné" })).toBeVisible();
@@ -80,7 +84,7 @@ test("marchand publie, consommateur réserve, marchand valide, admin nettoie", a
 
   let pickupCode = "";
   await test.step("le consommateur réserve le panier", async () => {
-    await page.goBack();
+    await page.getByText(BASKET_NAME).click();
     await page.waitForURL("**/offre?id=*");
     await page.getByRole("button", { name: "Réserver ce panier" }).click();
     await page.waitForURL("**/reservation");
@@ -95,7 +99,7 @@ test("marchand publie, consommateur réserve, marchand valide, admin nettoie", a
     await page.goto("/profil");
     await expect(page.getByText(BASKET_NAME)).toBeVisible();
     await expect(page.getByText(pickupCode)).toBeVisible();
-    await expect(page.getByRole("link", { name: "Boulangerie e2e" })).toBeVisible();
+    await expect(page.getByRole("link", { name: MERCHANT_NAME })).toBeVisible();
     await expect(page.locator(".state.error")).toHaveCount(0);
   });
 

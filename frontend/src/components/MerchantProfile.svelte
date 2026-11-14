@@ -7,14 +7,17 @@
     followMerchant,
     unfollowMerchant,
     listFollowedMerchants,
+    reserveSeveral,
     formatPrice,
     formatDistance,
     ApiError,
     type MerchantProfile,
+    type Product,
   } from "../lib/api";
   import { getConsumerToken } from "../lib/auth";
   import { getQueryParam } from "../lib/params";
   import { getBrowserPosition } from "../lib/geoloc";
+  import { nomDuPays } from "../lib/pays";
 
   let merchant: MerchantProfile | null = null;
   let loading = true;
@@ -22,6 +25,45 @@
   let following = false;
   let followBusy = false;
   let merchantId = "";
+
+  // Paniers choisis pour une réservation groupée : id du panier → quantité.
+  // Un seul code de retrait pour le tout, chez ce commerce.
+  const MAX_PAR_PANIER = 10;
+  let choix: Record<string, number> = {};
+  let reserving = false;
+  let reserveError = "";
+
+  $: actives = merchant ? merchant.offres.filter((o) => o.statut === "publie") : [];
+  $: nbChoisis = Object.values(choix).reduce((n, q) => n + q, 0);
+  $: totalChoisi = actives.reduce((t, o) => t + (choix[o.id] ?? 0) * Number(o.prix_demarque), 0);
+
+  function changer(offer: Product, delta: number) {
+    const max = Math.min(offer.quantite, MAX_PAR_PANIER);
+    const q = Math.max(0, Math.min(max, (choix[offer.id] ?? 0) + delta));
+    choix = { ...choix, [offer.id]: q };
+    reserveError = "";
+  }
+
+  async function reserverLaSelection() {
+    const token = getConsumerToken();
+    if (!token) {
+      window.location.href = `/compte?mode=login&next=${encodeURIComponent(`/marchand?id=${merchantId}`)}`;
+      return;
+    }
+    const lignes = Object.entries(choix)
+      .filter(([, quantite]) => quantite > 0)
+      .map(([offre_id, quantite]) => ({ offre_id, quantite }));
+    reserving = true;
+    reserveError = "";
+    try {
+      const confirmation = await reserveSeveral(lignes, token);
+      sessionStorage.setItem("dc_last_reservation", JSON.stringify(confirmation));
+      window.location.href = "/reservation";
+    } catch (err) {
+      reserveError = err instanceof ApiError ? err.message : "La réservation a échoué.";
+      reserving = false;
+    }
+  }
 
   onMount(async () => {
     const id = getQueryParam("id");
@@ -82,7 +124,7 @@
         <div class="identity-text">
           <h1>{merchant.nom}</h1>
           <p class="subtitle">
-            {merchant.categorie} · {merchant.adresse}{merchant.note ? ` · ⭐ ${merchant.note}` : ""}{formatDistance(merchant.distance_km) ? ` · ${formatDistance(merchant.distance_km)}` : ""}
+            {merchant.categorie} · {merchant.adresse}{merchant.adresse ? `, ${nomDuPays(merchant.pays)}` : ""}{merchant.note ? ` · ⭐ ${merchant.note}` : ""}{formatDistance(merchant.distance_km) ? ` · ${formatDistance(merchant.distance_km)}` : ""}
           </p>
         </div>
       </div>
@@ -91,21 +133,45 @@
       </button>
       <div class="section-title">Offres actives</div>
       <div class="offers">
-        {#each merchant.offres.filter((o) => o.statut === "publie") as offer}
-          <a class="card offer-row" href={`/offre?id=${offer.id}`}>
-            <div class="offer-photo">
-              <Photo shape="rounded" radius={10} label="Photo" src={offer.photo_url} />
+        {#each actives as offer (offer.id)}
+          <div class="card offer-row">
+            <a class="offer-link" href={`/offre?id=${offer.id}`}>
+              <div class="offer-photo">
+                <Photo shape="rounded" radius={10} label="Photo" src={offer.photo_url} />
+              </div>
+              <div class="offer-info">
+                <div class="offer-name">{offer.nom}</div>
+                <div class="offer-price">{formatPrice(offer.prix_demarque)}</div>
+                <div class="offer-stock">{offer.quantite} restant{offer.quantite > 1 ? "s" : ""}</div>
+              </div>
+            </a>
+            <div class="stepper">
+              {#if (choix[offer.id] ?? 0) > 0}
+                <button type="button" aria-label={`Retirer un ${offer.nom}`} on:click={() => changer(offer, -1)}>−</button>
+                <span class="qty" aria-live="polite">{choix[offer.id]}</span>
+              {/if}
+              <button
+                type="button"
+                aria-label={`Ajouter un ${offer.nom}`}
+                on:click={() => changer(offer, 1)}
+                disabled={(choix[offer.id] ?? 0) >= Math.min(offer.quantite, MAX_PAR_PANIER)}
+              >+</button>
             </div>
-            <div class="offer-info">
-              <div class="offer-name">{offer.nom}</div>
-              <div class="offer-price">{formatPrice(offer.prix_demarque)}</div>
-            </div>
-          </a>
+          </div>
         {/each}
-        {#if merchant.offres.filter((o) => o.statut === "publie").length === 0}
+        {#if actives.length === 0}
           <p class="empty">Pas d'offre active pour le moment.</p>
         {/if}
       </div>
+      {#if nbChoisis > 0}
+        <button class="btn btn-primary reserve-all" on:click={reserverLaSelection} disabled={reserving}>
+          {reserving
+            ? "Réservation..."
+            : `Réserver ${nbChoisis} panier${nbChoisis > 1 ? "s" : ""} · ${formatPrice(totalChoisi)}`}
+        </button>
+        <p class="hint">Un seul code de retrait pour l'ensemble.</p>
+      {/if}
+      {#if reserveError}<p class="state error">{reserveError}</p>{/if}
     </div>
   {/if}
   <BottomNav active="feed" />
@@ -195,10 +261,64 @@
 
   .offer-row {
     display: flex;
+    align-items: center;
     gap: 10px;
     padding: 10px;
+  }
+
+  .offer-link {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    gap: 10px;
     text-decoration: none;
     color: inherit;
+  }
+
+  .offer-stock {
+    font-size: 11px;
+    color: var(--color-muted);
+  }
+
+  .stepper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .stepper button {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    border: 1px solid var(--color-border);
+    background: #fff;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--color-ink);
+    cursor: pointer;
+  }
+
+  .stepper button:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
+  .qty {
+    min-width: 16px;
+    text-align: center;
+    font-weight: 700;
+  }
+
+  .reserve-all {
+    width: 100%;
+  }
+
+  .hint {
+    font-size: 12px;
+    color: var(--color-muted);
+    text-align: center;
+    margin-top: -6px;
   }
 
   .offer-photo {

@@ -18,6 +18,7 @@ use derniere_chance_api::infrastructure::database::repositories::{
     PostgresRefreshTokenRepository, PostgresReservationRepository, PostgresSubscriptionRepository,
 };
 use derniere_chance_api::infrastructure::email::sender_from_env;
+use derniere_chance_api::infrastructure::geocoding::{geocoder_from_env, suggester_from_env};
 use derniere_chance_api::infrastructure::notifications::WebhookNotifier;
 use derniere_chance_api::infrastructure::storage::{PhotoStorage, PhotoStorageConfig};
 use derniere_chance_api::infrastructure::web::{configure_routes, AppState};
@@ -80,6 +81,12 @@ async fn main() -> std::io::Result<()> {
         tracing::info!(%email_provider, "transporteur d'email en service");
     }
 
+    // Adresse du commerce -> position sur la carte (Nominatim par défaut,
+    // fictif en dev/e2e). Nommé au démarrage, comme le transporteur d'email.
+    let (geocoder, geocoder_name) = geocoder_from_env(&app_base_url);
+    let address_suggester = suggester_from_env(&app_base_url);
+    tracing::info!(geocodeur = geocoder_name, "géocodeur en service");
+
     let photo_storage = Arc::new(PhotoStorage::from_config(PhotoStorageConfig::from_env()).await);
 
     // n8n webhook -> email for noteworthy events (nouveau marchand, nouveau
@@ -99,6 +106,8 @@ async fn main() -> std::io::Result<()> {
         consent_repo.clone(),
         jwt_secret.clone(),
         event_notifier.clone(),
+        geocoder,
+        address_suggester,
     ));
 
     let state = web::Data::new(AppState {

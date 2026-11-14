@@ -19,17 +19,19 @@ impl PostgresMerchantRepository {
 impl MerchantRepository for PostgresMerchantRepository {
     async fn create(&self, new: NewMerchant) -> Result<Merchant, RepoError> {
         sqlx::query_as::<_, Merchant>(
-            "INSERT INTO marchands (nom, adresse, categorie, email, password_hash, latitude, longitude)
-             VALUES ($1, $2, $3, $4, $5, $6, $7)
-             RETURNING id, nom, adresse, categorie, note, email, password_hash, latitude, longitude, logo_url, created_at, anonymise_le",
+            "INSERT INTO marchands (nom, adresse, pays, categorie, email, password_hash, latitude, longitude, adresse_confirmee_le)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+             RETURNING id, nom, adresse, pays, categorie, note, email, password_hash, latitude, longitude, adresse_confirmee_le, logo_url, created_at, anonymise_le",
         )
         .bind(new.nom)
         .bind(new.adresse)
+        .bind(new.pays)
         .bind(new.categorie)
         .bind(new.email)
         .bind(new.password_hash)
         .bind(new.latitude)
         .bind(new.longitude)
+        .bind(new.adresse_confirmee_le)
         .fetch_one(&self.pool)
         .await
         .map_err(Into::into)
@@ -37,7 +39,7 @@ impl MerchantRepository for PostgresMerchantRepository {
 
     async fn find_by_email(&self, email: &str) -> Result<Option<Merchant>, RepoError> {
         sqlx::query_as::<_, Merchant>(
-            "SELECT id, nom, adresse, categorie, note, email, password_hash, latitude, longitude, logo_url, created_at, anonymise_le
+            "SELECT id, nom, adresse, pays, categorie, note, email, password_hash, latitude, longitude, adresse_confirmee_le, logo_url, created_at, anonymise_le
              FROM marchands WHERE email = $1",
         )
         .bind(email)
@@ -48,7 +50,7 @@ impl MerchantRepository for PostgresMerchantRepository {
 
     async fn find_by_id(&self, id: Uuid) -> Result<Option<Merchant>, RepoError> {
         sqlx::query_as::<_, Merchant>(
-            "SELECT id, nom, adresse, categorie, note, email, password_hash, latitude, longitude, logo_url, created_at, anonymise_le
+            "SELECT id, nom, adresse, pays, categorie, note, email, password_hash, latitude, longitude, adresse_confirmee_le, logo_url, created_at, anonymise_le
              FROM marchands WHERE id = $1",
         )
         .bind(id)
@@ -59,7 +61,7 @@ impl MerchantRepository for PostgresMerchantRepository {
 
     async fn list_all(&self) -> Result<Vec<Merchant>, RepoError> {
         sqlx::query_as::<_, Merchant>(
-            "SELECT id, nom, adresse, categorie, note, email, password_hash, latitude, longitude, logo_url, created_at, anonymise_le
+            "SELECT id, nom, adresse, pays, categorie, note, email, password_hash, latitude, longitude, adresse_confirmee_le, logo_url, created_at, anonymise_le
              FROM marchands ORDER BY created_at DESC",
         )
         .fetch_all(&self.pool)
@@ -106,6 +108,7 @@ impl MerchantRepository for PostgresMerchantRepository {
                     adresse = '',
                     latitude = NULL,
                     longitude = NULL,
+                    adresse_confirmee_le = NULL,
                     logo_url = NULL,
                     email = 'anonyme-' || id::text || '@invalid',
                     password_hash = '',
@@ -129,7 +132,7 @@ impl MerchantRepository for PostgresMerchantRepository {
     async fn update_logo(&self, id: Uuid, logo_url: &str) -> Result<Merchant, RepoError> {
         sqlx::query_as::<_, Merchant>(
             "UPDATE marchands SET logo_url = $2 WHERE id = $1
-             RETURNING id, nom, adresse, categorie, note, email, password_hash, latitude, longitude, logo_url, created_at, anonymise_le",
+             RETURNING id, nom, adresse, pays, categorie, note, email, password_hash, latitude, longitude, adresse_confirmee_le, logo_url, created_at, anonymise_le",
         )
         .bind(id)
         .bind(logo_url)
@@ -140,13 +143,20 @@ impl MerchantRepository for PostgresMerchantRepository {
 
     async fn update(&self, id: Uuid, changes: MerchantUpdate) -> Result<Merchant, RepoError> {
         sqlx::query_as::<_, Merchant>(
-            "UPDATE marchands SET nom = $2, adresse = $3, categorie = $4 WHERE id = $1
-             RETURNING id, nom, adresse, categorie, note, email, password_hash, latitude, longitude, logo_url, created_at, anonymise_le",
+            "UPDATE marchands
+                SET nom = $2, adresse = $3, pays = $4, categorie = $5,
+                    latitude = $6, longitude = $7, adresse_confirmee_le = $8
+              WHERE id = $1
+             RETURNING id, nom, adresse, pays, categorie, note, email, password_hash, latitude, longitude, adresse_confirmee_le, logo_url, created_at, anonymise_le",
         )
         .bind(id)
         .bind(changes.nom)
         .bind(changes.adresse)
+        .bind(changes.pays)
         .bind(changes.categorie)
+        .bind(changes.latitude)
+        .bind(changes.longitude)
+        .bind(changes.adresse_confirmee_le)
         .fetch_optional(&self.pool)
         .await?
         .ok_or(RepoError::NotFound)

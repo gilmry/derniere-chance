@@ -2,7 +2,7 @@
   import { onMount } from "svelte";
   import { consumerLogin, consumerRegister, MIN_PASSWORD_LENGTH, ApiError } from "../lib/api";
   import { setConsumerToken, setConsumerEmail } from "../lib/auth";
-  import { getQueryParam } from "../lib/params";
+  import { getQueryParam, pageInterne } from "../lib/params";
 
   export let mode: "login" | "register" = "register";
   export let next = "/feed";
@@ -10,7 +10,7 @@
   onMount(() => {
     const qMode = getQueryParam("mode");
     if (qMode === "login" || qMode === "register") mode = qMode;
-    next = getQueryParam("next") ?? next;
+    next = pageInterne(getQueryParam("next")) ?? next;
   });
 
   let email = "";

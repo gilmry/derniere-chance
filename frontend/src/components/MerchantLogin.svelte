@@ -1,8 +1,16 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { merchantLogin, merchantRegister, ApiError, MERCHANT_CATEGORIES, MIN_PASSWORD_LENGTH } from "../lib/api";
+  import {
+    merchantLogin,
+    merchantRegister,
+    isEtablissementIntrouvable,
+    ApiError,
+    MERCHANT_CATEGORIES,
+    MIN_PASSWORD_LENGTH,
+  } from "../lib/api";
+  import AddressInput from "./AddressInput.svelte";
   import { setMerchantToken } from "../lib/auth";
-  import { getBrowserPosition } from "../lib/geoloc";
+  import { PAYS, PAYS_PAR_DEFAUT } from "../lib/pays";
   import { getQueryParam } from "../lib/params";
 
   let mode: "login" | "register" = "login";
@@ -15,6 +23,16 @@
   let password = "";
   let nom = "";
   let adresse = "";
+  let pays = PAYS_PAR_DEFAUT;
+  // Commerce non trouvé à cette adresse : le commerçant peut l'ajouter
+  // manuellement en cochant une case. La case n'apparaît qu'après ce refus,
+  // et disparaît dès que le nom, l'adresse ou le pays change.
+  let adresseIntrouvable = false;
+  let adresseConfirmee = false;
+  function adresseModifiee() {
+    adresseIntrouvable = false;
+    adresseConfirmee = false;
+  }
   let categorie = "";
   // Jamais pré-cochée : le consentement doit être un acte positif (RGPD
   // art. 4 §11). Le commerçant confie plus qu'un client - nom, adresse et
@@ -30,19 +48,25 @@
       error = "Il faut accepter de participer au programme bêta pour créer un compte.";
       return;
     }
+    if (mode === "register" && adresseIntrouvable && !adresseConfirmee) {
+      error = "Vérifiez le nom et l'adresse, ou cochez la case pour ajouter votre commerce manuellement.";
+      return;
+    }
     loading = true;
     try {
       let auth;
       if (mode === "register") {
-        const coords = await getBrowserPosition();
+        // La position du commerce est calculée par le backend depuis
+        // l'adresse et le pays, pas depuis l'endroit où se trouve le
+        // commerçant quand il s'inscrit.
         auth = await merchantRegister({
           nom,
           adresse,
+          pays,
           categorie,
           email,
           password,
-          latitude: coords?.lat,
-          longitude: coords?.lon,
+          adresse_confirmee: adresseIntrouvable && adresseConfirmee,
         });
       } else {
         auth = await merchantLogin(email, password);
@@ -51,6 +75,7 @@
       window.location.href = "/pro/dashboard";
     } catch (err) {
       error = err instanceof ApiError ? err.message : "Une erreur est survenue.";
+      if (mode === "register" && isEtablissementIntrouvable(err)) adresseIntrouvable = true;
     } finally {
       loading = false;
     }
@@ -66,9 +91,27 @@
     <h1>Vos invendus, en 30 secondes.</h1>
     <div class="fields">
       {#if mode === "register"}
-        <input placeholder="Nom du commerce" bind:value={nom} required />
-        <input placeholder="Adresse" bind:value={adresse} required />
-        <select bind:value={categorie} required>
+        <input placeholder="Nom du commerce" bind:value={nom} on:input={adresseModifiee} required />
+        <!-- Pays d'abord : il borne les suggestions d'adresses. -->
+        <select aria-label="Pays" bind:value={pays} on:change={adresseModifiee} required>
+          {#each PAYS as [code, nomPays]}
+            <option value={code}>{nomPays}</option>
+          {/each}
+        </select>
+        <AddressInput bind:value={adresse} {pays} on:input={adresseModifiee} />
+        {#if adresseIntrouvable}
+          <!-- Jamais pré-cochée : la recherche ne connaît pas ce commerce,
+               c'est le commerçant qui s'en porte garant. Vérifiée aussi par le
+               backend. -->
+          <label class="consent">
+            <input type="checkbox" bind:checked={adresseConfirmee} />
+            <span>
+              Mon commerce n'a pas été trouvé, mais il existe bien à cette adresse :
+              je l'ajoute manuellement.
+            </span>
+          </label>
+        {/if}
+        <select aria-label="Catégorie" bind:value={categorie} required>
           <option value="" disabled selected>Catégorie</option>
           {#each Object.entries(MERCHANT_CATEGORIES) as [cat, emoji]}
             <option value={cat}>{emoji} {cat}</option>

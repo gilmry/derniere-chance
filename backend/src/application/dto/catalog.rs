@@ -20,6 +20,8 @@ pub struct OfferDto {
     pub marchand_note: Option<Decimal>,
     pub marchand_latitude: Option<f64>,
     pub marchand_longitude: Option<f64>,
+    /// Logo du commerce, affiché dans la liste des commerces du fil.
+    pub marchand_logo_url: Option<String>,
     /// Distance au marchand en km, calculée si le consommateur a partagé sa
     /// position (`?lat=&lon=`) ET que le marchand a la sienne (cf. VISION.md
     /// §8). `None` sinon - jamais devinée.
@@ -46,6 +48,7 @@ impl From<ProductWithMerchant> for OfferDto {
             marchand_note: p.marchand_note,
             marchand_latitude: p.marchand_latitude,
             marchand_longitude: p.marchand_longitude,
+            marchand_logo_url: p.marchand_logo_url,
             distance_km: None,
             reduction_pct: discount_percent(p.prix_initial, p.prix_demarque),
             nom: p.nom,

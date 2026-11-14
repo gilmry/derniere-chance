@@ -14,7 +14,7 @@ const PRODUCT_COLUMNS: &str =
 const OFFER_SELECT: &str = "SELECT p.id, p.marchand_id, m.nom AS marchand_nom, \
      m.categorie AS marchand_categorie, m.note AS marchand_note, \
      m.latitude AS marchand_latitude, m.longitude AS marchand_longitude, \
-     p.nom, p.description, \
+     m.logo_url AS marchand_logo_url, p.nom, p.description, \
      p.prix_initial, p.prix_demarque, p.quantite, p.retrait_debut, p.retrait_fin, p.statut, \
      p.photo_url \
      FROM produits p JOIN marchands m ON m.id = p.marchand_id";

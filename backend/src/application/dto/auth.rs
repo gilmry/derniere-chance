@@ -16,13 +16,18 @@ pub struct AuthResponse {
 pub struct RegisterMerchantRequest {
     pub nom: String,
     pub adresse: String,
+    /// Code ISO du pays du commerce. Absent : France, comme les comptes créés
+    /// avant l'ajout du champ. La position n'est plus fournie par le client :
+    /// le backend la calcule depuis l'adresse et le pays (`Geocoder`).
+    #[serde(default)]
+    pub pays: Option<String>,
     pub categorie: String,
     pub email: String,
     pub password: String,
-    /// Captée via navigator.geolocation côté frontend au moment de
-    /// l'inscription - optionnelle (refus possible), voir VISION.md §8.
-    pub latitude: Option<f64>,
-    pub longitude: Option<f64>,
+    /// Case cochée par le commerçant quand son commerce n'est pas trouvé :
+    /// il l'ajoute manuellement. Voir `UpdateMerchantDto`.
+    #[serde(default)]
+    pub adresse_confirmee: bool,
     /// Version du texte de consentement bêta cochée à l'inscription. Champ
     /// obligatoire, comme pour un consommateur : nom, adresse et position
     /// d'un commerçant en personne physique sont des données personnelles,

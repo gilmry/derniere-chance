@@ -27,6 +27,10 @@ pub const BETA_CONSENT_VERSION: &str = "2026-08-30";
 pub enum ConsentError {
     #[error("consent version is no longer current")]
     StaleVersion,
+    /// Le jeton est valide mais le compte a été supprimé entre-temps : il
+    /// faut se reconnecter (ou recréer un compte), pas réessayer.
+    #[error("account no longer exists")]
+    AccountNotFound,
     #[error("internal error: {0}")]
     Internal(#[from] RepoError),
 }
@@ -91,7 +95,11 @@ impl ConsentUseCases {
 
         self.consent_repo
             .grant(subject, BETA_CONSENT_VERSION)
-            .await?;
+            .await
+            .map_err(|err| match err {
+                RepoError::NotFound => ConsentError::AccountNotFound,
+                other => other.into(),
+            })?;
         self.status(subject).await
     }
 

@@ -63,8 +63,9 @@ impl SubscriptionRepository for PostgresSubscriptionRepository {
             // Projection explicite : toute colonne ajoutée à l'entité
             // `Merchant` doit être reprise ici, sinon `FromRow` échoue à
             // l'exécution (ColumnNotFound) et non à la compilation.
-            "SELECT m.id, m.nom, m.adresse, m.categorie, m.note, m.email, m.password_hash, \
-             m.latitude, m.longitude, m.logo_url, m.created_at, m.anonymise_le
+            "SELECT m.id, m.nom, m.adresse, m.pays, m.categorie, m.note, m.email, \
+             m.password_hash, m.latitude, m.longitude, m.adresse_confirmee_le, m.logo_url, \
+             m.created_at, m.anonymise_le
              FROM marchands m
              JOIN abonnements a ON a.marchand_id = m.id
              WHERE a.consommateur_id = $1

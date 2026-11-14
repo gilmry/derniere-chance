@@ -1,9 +1,12 @@
 use actix_web::{web, HttpResponse};
+use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::application::use_cases::ReservationError;
 use crate::infrastructure::web::app_state::AppState;
-use crate::infrastructure::web::handlers::responses::{conflict, forbidden, internal_error, not_found};
+use crate::infrastructure::web::handlers::responses::{
+    bad_request, conflict, forbidden, internal_error, not_found,
+};
 use crate::infrastructure::web::middleware::{ConsentedConsumer, ConsentedMerchant};
 
 pub async fn reserve(
@@ -17,9 +20,49 @@ pub async fn reserve(
         .await
     {
         Ok(confirmation) => HttpResponse::Created().json(confirmation),
-        Err(ReservationError::ProductNotFound) => not_found("offer not found"),
-        Err(err @ ReservationError::SoldOut) => conflict(&err.to_string()),
-        Err(err) => {
+        Err(err) => reservation_error(err),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LigneDemandee {
+    pub offre_id: Uuid,
+    pub quantite: i32,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ReserveSeveralRequest {
+    pub lignes: Vec<LigneDemandee>,
+}
+
+/// Plusieurs paniers d'un même commerce, un seul code de retrait.
+pub async fn reserve_several(
+    state: web::Data<AppState>,
+    consumer: ConsentedConsumer,
+    body: web::Json<ReserveSeveralRequest>,
+) -> HttpResponse {
+    let demande = body
+        .into_inner()
+        .lignes
+        .into_iter()
+        .map(|ligne| (ligne.offre_id, ligne.quantite))
+        .collect();
+    match state
+        .reservation_use_cases
+        .reserve_several(consumer.consommateur_id, demande)
+        .await
+    {
+        Ok(confirmation) => HttpResponse::Created().json(confirmation),
+        Err(err) => reservation_error(err),
+    }
+}
+
+fn reservation_error(err: ReservationError) -> HttpResponse {
+    match err {
+        ReservationError::ProductNotFound => not_found("offer not found"),
+        ReservationError::SoldOut => conflict(&err.to_string()),
+        ReservationError::InvalidInput(message) => bad_request(&message),
+        err => {
             tracing::error!(?err, "reserve failed");
             internal_error()
         }

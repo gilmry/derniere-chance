@@ -11,15 +11,17 @@ pub enum ReservationStatus {
     Expiree,
 }
 
-/// A consommateur's claim on one unit of a produit. `code` is what they
-/// present in store; the marchand validates it to mark the reservation
-/// `Recuperee`.
+/// A consommateur's claim on `quantite` units of a produit. `code` is what
+/// they present in store; the marchand validates it to mark the reservation
+/// `Recuperee`. Plusieurs paniers d'un même commerce réservés ensemble sont
+/// autant de lignes partageant le même code.
 #[derive(Debug, Clone, Serialize, sqlx::FromRow)]
 pub struct Reservation {
     pub id: Uuid,
     pub produit_id: Uuid,
     pub consommateur_id: Uuid,
     pub code: String,
+    pub quantite: i32,
     pub statut: ReservationStatus,
     pub created_at: DateTime<Utc>,
 }

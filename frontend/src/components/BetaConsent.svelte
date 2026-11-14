@@ -14,7 +14,7 @@
     getMerchantToken,
     clearMerchantToken,
   } from "../lib/auth";
-  import { getQueryParam } from "../lib/params";
+  import { getQueryParam, pageInterne } from "../lib/params";
 
   /// Même écran pour les deux principaux : le circuit est identique, seuls
   /// les données en jeu et l'espace de retour changent.
@@ -33,7 +33,7 @@
 
   onMount(async () => {
     if (!getQueryParam("next") && marchand) next = "/pro/dashboard";
-    next = getQueryParam("next") ?? next;
+    next = pageInterne(getQueryParam("next")) ?? next;
     token = marchand ? getMerchantToken() : getConsumerToken();
     if (!token) {
       loading = false;
@@ -55,6 +55,14 @@
       status = await grantConsent(token, role);
       window.location.href = next;
     } catch (err) {
+      // 401 : le compte de ce jeton a été supprimé. On oublie le jeton et on
+      // renvoie vers la connexion, au lieu de laisser un bouton sans effet.
+      if (err instanceof ApiError && err.status === 401) {
+        if (marchand) clearMerchantToken();
+        else clearConsumerToken();
+        window.location.href = marchand ? "/pro/login?mode=login" : "/compte?mode=login";
+        return;
+      }
       error = err instanceof ApiError ? err.message : "Une erreur est survenue.";
     } finally {
       submitting = false;

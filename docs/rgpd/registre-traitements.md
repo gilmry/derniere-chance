@@ -124,6 +124,8 @@ immédiatement.
 | n8n auto-hébergé | Sous-traitant | Les seules informations nécessaires aux emails de notification (nouvelle réservation, retrait effectué, inscription). Pour l'événement `compte_anonymise`, uniquement l'identifiant technique et le rôle : jamais l'email ni le nom du commerce, sans quoi la donnée effacée survivrait chez le sous-traitant |
 | Proton AG (Suisse) | Sous-traitant | L'adresse email du destinataire et le contenu du message, acheminés par son relais SMTP : alerte « nouvelle démarque » (nom du commerce, du panier, prix, créneau de retrait) ou lien de réinitialisation de mot de passe. Ce dernier ne nomme ni le compte ni la personne, pour ne rien révéler s'il atteint la boîte de quelqu'un qui n'a rien demandé. Aucune liste de contacts n'est déposée chez le fournisseur : chaque message est envoyé à l'unité depuis notre base |
 | Fournisseur du serveur (VPS) | Hébergeur d'infrastructure | Aucun accès applicatif ; données chiffrées en transit |
+| Fondation OpenStreetMap (Royaume-Uni), service Nominatim | Destinataire | Le nom et l'adresse d'un commerce, envoyés par notre serveur à l'inscription et à chaque changement de nom ou d'adresse, pour vérifier l'adresse et retrouver le commerce. Ni email, ni mot de passe, ni adresse IP du commerçant |
+| komoot GmbH (Allemagne), service Photon | Destinataire | Le début de l'adresse en cours de saisie et le pays choisi, envoyés par notre serveur pour proposer des adresses complètes. Ni email, ni nom, ni adresse IP du commerçant |
 
 Auto-hébergement : application, base PostgreSQL et photos (MinIO) tournent sur
 un serveur administré directement par le responsable. Pas de plateforme
@@ -139,10 +141,12 @@ Un seul sous-traitant achemine les emails. Aucune voie de rechange n'est
 câblée : en ajouter une serait un changement de sous-traitant, donc une mise à
 jour de ce registre.
 
-**Transferts hors de l'Union européenne : la Suisse, et elle seule.** Proton AG
-est établie en Suisse. Ce transfert est licite sans garanties supplémentaires
-au titre de l'article 45 du RGPD, la Commission européenne ayant constaté que
-la Suisse assure un niveau de protection adéquat. Aucun transfert vers un pays
+**Transferts hors de l'Union européenne : la Suisse et le Royaume-Uni.**
+Proton AG est établie en Suisse ; la Fondation OpenStreetMap, qui exploite
+Nominatim, au Royaume-Uni (seuls le nom et l'adresse publics d'un commerce lui
+parviennent). Ces transferts sont licites sans garanties supplémentaires au
+titre de l'article 45 du RGPD, la Commission européenne ayant constaté que ces
+deux pays assurent un niveau de protection adéquat. Aucun transfert vers un pays
 tiers dépourvu de décision d'adéquation, en particulier aucun vers les
 États-Unis.
 
@@ -231,3 +235,4 @@ marchand étant un point de vente fixe, non une trajectoire.
 | 2026-08-30 | Création du registre. Mise en conformité initiale du programme bêta : consentement explicite tracé, retrait automatisé avec anonymisation, politique de confidentialité publiée, rétention des journaux bornée à 30 jours. |
 | 2026-08-30 | Extension du consentement aux commerçants partenaires (nom, adresse et position publiés sur la carte). Retrait côté marchand : dépublication des paniers puis anonymisation. Portier étendu à tous les endpoints marchand, `/mcp` compris. |
 | 2026-08-30 | Effacement possible sans avoir consenti (compte antérieur, ou refus d'une nouvelle version du texte). Notification `compte_anonymise` au responsable de traitement à chaque effacement, sans donnée identifiante. |
+| 2026-11-14 | Géocodage des commerces : nom et adresse transmis à Nominatim (Fondation OpenStreetMap, Royaume-Uni) et début d'adresse à Photon (komoot, Allemagne). Transfert vers le Royaume-Uni ajouté (décision d'adéquation). Politique de confidentialité mise à jour en conséquence. |

@@ -4,6 +4,7 @@ mod consumer_repository;
 mod email_sender;
 mod error;
 mod event_notifier;
+mod geocoder;
 mod merchant_repository;
 mod notification_repository;
 mod oauth_repository;
@@ -18,6 +19,7 @@ pub use consumer_repository::{ConsumerRepository, NewConsumer};
 pub use email_sender::{EmailError, EmailSender};
 pub use error::RepoError;
 pub use event_notifier::EventNotifier;
+pub use geocoder::{AddressSuggester, Coordonnees, Etablissement, GeocodeError, Geocoder};
 pub use merchant_repository::{MerchantRepository, MerchantUpdate, NewMerchant};
 pub use notification_repository::{NewNotification, NotificationRepository};
 pub use oauth_repository::{
@@ -27,6 +29,6 @@ pub use oauth_repository::{
 pub use password_reset_repository::{NewPasswordReset, PasswordResetRepository};
 pub use product_repository::{NewProduct, ProductRepository, ProductUpdate, ProductWithMerchant};
 pub use reservation_repository::{
-    ConsumerStats, MerchantDailyStats, NewReservation, ReservationRepository, ReservationSummary,
+    ConsumerStats, MerchantDailyStats, NewReservationGroup, ReservationRepository, ReservationSummary,
 };
 pub use subscription_repository::{SubscriberContact, SubscriptionRepository};

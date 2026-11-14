@@ -95,8 +95,8 @@
       {#each reservations as r}
         <div class="card reservation-row">
           <div class="reservation-info">
-            <div class="row-name">{r.produit_nom} <span class="status-badge {r.statut === 'reservee' ? 'active' : 'exhausted'}">{STATUT_LABELS[r.statut] ?? r.statut}</span></div>
-            <div class="row-detail">{r.marchand_nom} · retrait {pickupWindow(r)} · {formatPrice(r.prix_demarque)}</div>
+            <div class="row-name">{r.quantite > 1 ? `${r.quantite} × ` : ""}{r.produit_nom} <span class="status-badge {r.statut === 'reservee' ? 'active' : 'exhausted'}">{STATUT_LABELS[r.statut] ?? r.statut}</span></div>
+            <div class="row-detail">{r.marchand_nom} · retrait {pickupWindow(r)} · {formatPrice(Number(r.prix_demarque) * r.quantite)}</div>
           </div>
           {#if r.statut === "reservee"}
             <div class="code">{r.code}</div>

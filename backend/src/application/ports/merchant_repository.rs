@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 use crate::application::ports::RepoError;
@@ -7,17 +8,25 @@ use crate::domain::entities::Merchant;
 pub struct NewMerchant {
     pub nom: String,
     pub adresse: String,
+    pub pays: String,
     pub categorie: String,
     pub email: String,
     pub password_hash: String,
     pub latitude: Option<f64>,
     pub longitude: Option<f64>,
+    pub adresse_confirmee_le: Option<DateTime<Utc>>,
 }
 
+/// La position suit toujours l'adresse : le cas d'usage la recalcule quand
+/// l'adresse ou le pays change, et la repasse telle quelle sinon.
 pub struct MerchantUpdate {
     pub nom: String,
     pub adresse: String,
+    pub pays: String,
     pub categorie: String,
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
+    pub adresse_confirmee_le: Option<DateTime<Utc>>,
 }
 
 #[async_trait]
