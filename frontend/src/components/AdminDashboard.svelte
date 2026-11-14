@@ -29,20 +29,36 @@
   let error = "";
   let token = "";
 
+  function fetchAll() {
+    return Promise.all([
+      adminStats(token),
+      adminListMerchants(token),
+      adminListConsumers(token),
+      adminListProducts(token),
+    ]);
+  }
+
   async function loadAll() {
     loading = true;
     error = "";
     try {
-      [stats, merchants, consumers, products] = await Promise.all([
-        adminStats(token),
-        adminListMerchants(token),
-        adminListConsumers(token),
-        adminListProducts(token),
-      ]);
+      [stats, merchants, consumers, products] = await fetchAll();
     } catch (err) {
       error = err instanceof ApiError ? err.message : "Impossible de charger le backoffice.";
     } finally {
       loading = false;
+    }
+  }
+
+  // Après une action, tout est rechargé en arrière-plan, sans écran de
+  // chargement : supprimer un marchand supprime aussi ses paniers, et les
+  // compteurs du haut changent. Sans cela, il fallait actualiser la page.
+  // Un échec ici n'efface rien : l'affichage déjà mis à jour reste.
+  async function refresh() {
+    try {
+      [stats, merchants, consumers, products] = await fetchAll();
+    } catch {
+      // l'action elle-même a réussi ; la prochaine visite rechargera tout
     }
   }
 
@@ -66,6 +82,7 @@
     try {
       await adminDeleteMerchant(id, token);
       merchants = merchants.filter((m) => m.id !== id);
+      refresh();
     } catch (err) {
       alert(err instanceof ApiError ? err.message : "La suppression a échoué.");
     }
@@ -76,6 +93,7 @@
     try {
       await adminDeleteConsumer(id, token);
       consumers = consumers.filter((c) => c.id !== id);
+      refresh();
     } catch (err) {
       alert(err instanceof ApiError ? err.message : "La suppression a échoué.");
     }
@@ -86,6 +104,7 @@
     try {
       await adminDeleteProduct(id, token);
       products = products.filter((p) => p.id !== id);
+      refresh();
     } catch (err) {
       alert(err instanceof ApiError ? err.message : "La suppression a échoué.");
     }
@@ -95,6 +114,7 @@
     try {
       await adminUnpublishProduct(id, token);
       products = products.map((p) => (p.id === id ? { ...p, statut: "ecoule" } : p));
+      refresh();
     } catch (err) {
       alert(err instanceof ApiError ? err.message : "L'action a échoué.");
     }
@@ -151,7 +171,7 @@
           <div class="card row">
             <div class="row-info">
               <div class="row-name">{m.nom}</div>
-              <div class="row-detail">{m.email} · {m.categorie} · {m.adresse}</div>
+              <div class="row-detail">{m.email} · {m.categorie} · {m.adresse}{m.pays ? ` (${m.pays})` : ""}{m.adresse_confirmee_le ? " · ⚠ commerce non vérifié (ajouté manuellement)" : ""}</div>
             </div>
             <button class="danger" on:click={() => removeMerchant(m.id, m.nom)}>Supprimer</button>
           </div>

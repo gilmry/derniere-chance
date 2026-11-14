@@ -28,6 +28,12 @@ pub fn configure_routes(cfg: &mut web::ServiceConfig) {
             "/marchands/connexion",
             web::post().to(handlers::merchant_auth::login),
         )
+        // Suggestions d'adresses pendant la saisie (inscription comprise, donc
+        // sans authentification).
+        .route(
+            "/adresses/suggestions",
+            web::get().to(handlers::merchant_auth::suggest_addresses),
+        )
         .route(
             "/consommateurs/inscription",
             web::post().to(handlers::consumer_auth::register),
@@ -123,6 +129,10 @@ pub fn configure_routes(cfg: &mut web::ServiceConfig) {
         .route(
             "/consommateurs/moi/reservations",
             web::get().to(handlers::list_my_reservations),
+        )
+        .route(
+            "/consommateurs/moi/reservations",
+            web::post().to(handlers::reserve_several),
         )
         // Public catalogue
         .route("/offres", web::get().to(handlers::list_offers))

@@ -170,6 +170,16 @@ services:
       SMTP_FROM_NAME: ${SMTP_FROM_NAME:-}
       # Base des liens mis dans les emails (fiche offre, profil).
       APP_BASE_URL: https://${DOMAIN:-derniere-chance.ecosolva.org}
+      # Position des commerces calculée depuis l'adresse saisie : Nominatim
+      # (OpenStreetMap) par défaut, recherche bornée au pays du commerce.
+      GEOCODEUR: ${GEOCODEUR:-nominatim}
+      NOMINATIM_URL: ${NOMINATIM_URL:-}
+      # Suggestions d'adresses pendant la saisie (Photon, OpenStreetMap).
+      PHOTON_URL: ${PHOTON_URL:-}
+      # Limites de débit par adresse IP sur les routes publiques qui appellent
+      # OpenStreetMap (voir backend/src/infrastructure/web/limiteur.rs).
+      LIMITE_INSCRIPTIONS_PAR_HEURE: ${LIMITE_INSCRIPTIONS_PAR_HEURE:-10}
+      LIMITE_SUGGESTIONS_PAR_MINUTE: ${LIMITE_SUGGESTIONS_PAR_MINUTE:-30}
     depends_on:
       postgres:
         condition: service_healthy
@@ -209,6 +219,18 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       WEBHOOK_NOTIFY_URL: ${WEBHOOK_NOTIFY_URL:-}
       APP_BASE_URL: http://localhost:${FRONTEND_PORT:-4322}
+      # Géocodeur fictif par défaut, pour la même raison que l'absence de
+      # SMTP_* ci-dessous : les adresses du dev et des e2e sont inventées, et
+      # le serveur public d'OpenStreetMap n'a pas à les recevoir. Toutes
+      # tombent sur la Grand-Place de Bruxelles ; une adresse contenant
+      # « introuvable » simule une adresse inconnue. GEOCODEUR=nominatim dans
+      # .env pour éprouver le vrai service.
+      GEOCODEUR: ${GEOCODEUR_DEV:-fictif}
+      # Limites de débit relevées : le dev et les e2e créent beaucoup de
+      # comptes depuis la même adresse (production : 10 inscriptions par heure
+      # et 30 suggestions par minute et par adresse IP).
+      LIMITE_INSCRIPTIONS_PAR_HEURE: ${LIMITE_INSCRIPTIONS_PAR_HEURE_DEV:-1000}
+      LIMITE_SUGGESTIONS_PAR_MINUTE: ${LIMITE_SUGGESTIONS_PAR_MINUTE_DEV:-1000}
       # Pas de SMTP_* ici, volontairement : le jeu de données de dev
       # contient des adresses fictives, et les leur envoyer pour de vrai ferait
       # rebondir des messages au nom du domaine de production. Le backend

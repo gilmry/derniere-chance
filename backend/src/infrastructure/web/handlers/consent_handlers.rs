@@ -4,7 +4,7 @@ use crate::application::dto::GrantConsentRequest;
 use crate::application::use_cases::ConsentError;
 use crate::domain::entities::ConsentSubject;
 use crate::infrastructure::web::app_state::AppState;
-use crate::infrastructure::web::handlers::responses::{conflict, internal_error};
+use crate::infrastructure::web::handlers::responses::{conflict, internal_error, unauthorized};
 use crate::infrastructure::web::middleware::{AuthenticatedConsumer, AuthenticatedMerchant};
 
 // Ces trois handlers sont volontairement sur `Authenticated*` et non sur les
@@ -27,6 +27,9 @@ async fn grant(state: &AppState, subject: ConsentSubject, version: &str) -> Http
         Err(ConsentError::StaleVersion) => conflict(
             "la politique de confidentialité a changé, recharge la page avant d'accepter",
         ),
+        Err(ConsentError::AccountNotFound) => {
+            unauthorized("ce compte n'existe plus : reconnecte-toi ou crée un compte")
+        }
         Err(err) => {
             tracing::error!(?err, role = subject.role(), "consent grant failed");
             internal_error()

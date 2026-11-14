@@ -42,6 +42,7 @@ pub struct ProductWithMerchant {
     pub marchand_note: Option<Decimal>,
     pub marchand_latitude: Option<f64>,
     pub marchand_longitude: Option<f64>,
+    pub marchand_logo_url: Option<String>,
     pub nom: String,
     pub description: String,
     pub prix_initial: Decimal,

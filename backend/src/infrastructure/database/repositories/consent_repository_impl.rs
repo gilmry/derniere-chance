@@ -46,7 +46,13 @@ impl ConsentRepository for PostgresConsentRepository {
         .bind(subject.id())
         .bind(version)
         .fetch_optional(&self.pool)
-        .await?;
+        .await
+        .map_err(|err| match err {
+            // Le compte n'existe plus (supprimé depuis le backoffice) alors
+            // que son jeton circule encore : ce n'est pas une panne.
+            sqlx::Error::Database(db) if db.is_foreign_key_violation() => RepoError::NotFound,
+            other => other.into(),
+        })?;
 
         match inserted {
             Some(consent) => Ok(consent),

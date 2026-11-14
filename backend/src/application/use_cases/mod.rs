@@ -17,7 +17,8 @@ pub use catalog_use_cases::{CatalogError, CatalogUseCases};
 pub use consent_use_cases::{ConsentError, ConsentUseCases, BETA_CONSENT_VERSION};
 pub use consumer_auth_use_cases::{ConsumerAuthError, ConsumerAuthUseCases};
 pub use dashboard_use_cases::{DashboardError, DashboardUseCases};
-pub use merchant_auth_use_cases::{MerchantAuthError, MerchantAuthUseCases};
+pub use merchant_auth_use_cases::{MerchantAuthError, MerchantAuthUseCases, ADRESSE_INTROUVABLE, ETABLISSEMENT_INTROUVABLE,
+};
 pub use oauth_use_cases::{OAuthError, OAuthUseCases};
 pub use password_reset_use_cases::{PasswordResetError, PasswordResetUseCases};
 pub use product_use_cases::{ProductError, ProductUseCases};

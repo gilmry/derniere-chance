@@ -20,4 +20,6 @@ pub use oauth::{
     TokenRequestDto, TokenResponseDto,
 };
 pub use product::{CreateProductDto, ProductResponseDto};
-pub use reservation::{PickupValidationDto, ReservationConfirmationDto};
+pub use reservation::{
+    resume_paniers, LigneReservationDto, PickupValidationDto, ReservationConfirmationDto,
+};

@@ -1,17 +1,32 @@
-use actix_web::{web, HttpResponse};
+use actix_web::{web, HttpRequest, HttpResponse};
+use serde::Deserialize;
 
 use crate::application::dto::{LoginRequest, RegisterMerchantRequest, UpdateMerchantDto};
-use crate::application::use_cases::MerchantAuthError;
+use crate::application::use_cases::{
+    MerchantAuthError, ADRESSE_INTROUVABLE, ETABLISSEMENT_INTROUVABLE,
+};
 use crate::infrastructure::web::app_state::AppState;
 use crate::infrastructure::web::handlers::responses::{
-    bad_request, conflict, internal_error, not_found, unauthorized,
+    bad_request, conflict, internal_error, not_found, service_unavailable, too_many_requests,
+    unauthorized, unprocessable,
 };
+use crate::infrastructure::web::limiteur;
+
+const TROP_DE_DEMANDES: &str = "trop de demandes depuis cette adresse, réessayez plus tard";
+
+/// Le géocodeur ne répond pas : rien n'a été enregistré.
+const GEOCODAGE_INDISPONIBLE: &str =
+    "la recherche d'adresse ne répond pas, réessayez dans quelques minutes";
 use crate::infrastructure::web::middleware::ConsentedMerchant;
 
 pub async fn register(
+    req: HttpRequest,
     state: web::Data<AppState>,
     dto: web::Json<RegisterMerchantRequest>,
 ) -> HttpResponse {
+    if !limiteur::inscriptions().autoriser(&limiteur::cle_client(&req)) {
+        return too_many_requests(TROP_DE_DEMANDES);
+    }
     match state
         .merchant_auth_use_cases
         .register(dto.into_inner())
@@ -23,6 +38,13 @@ pub async fn register(
             "la politique de confidentialité a changé, recharge la page avant de t'inscrire",
         ),
         Err(MerchantAuthError::InvalidInput(message)) => bad_request(&message),
+        Err(MerchantAuthError::GeocodingUnavailable) => service_unavailable(GEOCODAGE_INDISPONIBLE),
+        Err(MerchantAuthError::AdresseIntrouvable) => {
+            unprocessable("adresse_introuvable", ADRESSE_INTROUVABLE)
+        }
+        Err(MerchantAuthError::EtablissementIntrouvable) => {
+            unprocessable("etablissement_introuvable", ETABLISSEMENT_INTROUVABLE)
+        }
         Err(err) => {
             tracing::error!(?err, "merchant register failed");
             internal_error()
@@ -72,8 +94,46 @@ pub async fn update_me(
     {
         Ok(profile) => HttpResponse::Ok().json(profile),
         Err(MerchantAuthError::NotFound) => not_found("merchant not found"),
+        Err(MerchantAuthError::InvalidInput(message)) => bad_request(&message),
+        Err(MerchantAuthError::GeocodingUnavailable) => service_unavailable(GEOCODAGE_INDISPONIBLE),
+        Err(MerchantAuthError::AdresseIntrouvable) => {
+            unprocessable("adresse_introuvable", ADRESSE_INTROUVABLE)
+        }
+        Err(MerchantAuthError::EtablissementIntrouvable) => {
+            unprocessable("etablissement_introuvable", ETABLISSEMENT_INTROUVABLE)
+        }
         Err(err) => {
             tracing::error!(?err, "merchant profile update failed");
+            internal_error()
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SuggestionsQuery {
+    q: String,
+    pays: String,
+}
+
+/// `GET /adresses/suggestions?q=12 rue de la&pays=FR` → `["12 Rue de la Gare, ..."]`.
+pub async fn suggest_addresses(
+    req: HttpRequest,
+    state: web::Data<AppState>,
+    query: web::Query<SuggestionsQuery>,
+) -> HttpResponse {
+    if !limiteur::suggestions().autoriser(&limiteur::cle_client(&req)) {
+        return too_many_requests(TROP_DE_DEMANDES);
+    }
+    match state
+        .merchant_auth_use_cases
+        .suggerer_adresses(&query.q, &query.pays)
+        .await
+    {
+        Ok(suggestions) => HttpResponse::Ok().json(suggestions),
+        Err(MerchantAuthError::InvalidInput(message)) => bad_request(&message),
+        Err(MerchantAuthError::GeocodingUnavailable) => service_unavailable(GEOCODAGE_INDISPONIBLE),
+        Err(err) => {
+            tracing::error!(?err, "address suggestions failed");
             internal_error()
         }
     }

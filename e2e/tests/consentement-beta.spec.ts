@@ -76,7 +76,8 @@ test.describe("consentement bêta", () => {
       await page.goto("/pro/login?mode=register");
       await page.getByPlaceholder("Nom du commerce").fill(`Commerce ${STAMP}`);
       await page.getByPlaceholder("Adresse").fill("Rue du Consentement 1, Bruxelles");
-      await page.getByRole("combobox").selectOption("Primeur");
+      await page.getByRole("combobox", { name: "Pays" }).selectOption("BE");
+      await page.getByRole("combobox", { name: "Catégorie" }).selectOption("Primeur");
       await page.getByPlaceholder("Email professionnel").fill(MERCHANT_EMAIL);
       await page.getByPlaceholder("Mot de passe").fill(PASSWORD);
 
@@ -103,8 +104,9 @@ test.describe("consentement bêta", () => {
       await page.getByRole("button", { name: "Publier maintenant" }).click();
       await page.waitForURL("**/pro/dashboard");
 
+      // Le fil liste les commerces : c'est le sien qu'on y cherche.
       await page.goto("/feed");
-      await expect(page.getByText(BASKET_NAME)).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByText(`Commerce ${STAMP}`)).toBeVisible({ timeout: 15_000 });
     });
 
     await test.step("l'écran programme bêta atteste du consentement", async () => {
@@ -131,7 +133,7 @@ test.describe("consentement bêta", () => {
       // Le cœur de la démonstration : le traitement cesse vraiment, l'offre
       // ne survit pas au retrait du consentement de son commerçant.
       await page.goto("/feed");
-      await expect(page.getByText(BASKET_NAME)).toHaveCount(0, { timeout: 15_000 });
+      await expect(page.getByText(`Commerce ${STAMP}`)).toHaveCount(0, { timeout: 15_000 });
     });
   });
 });
